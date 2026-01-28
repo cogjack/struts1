@@ -898,12 +898,17 @@ An incremental migration approach is recommended to minimize risk and allow for 
 - Configure Thymeleaf and validation dependencies
 - Create application.properties with basic settings
 - Implement Spring Boot main application class
+- **Testing**: Verify application context loads successfully with `@SpringBootTest`
 
 **Phase 2: Data Layer Migration (1-2 days)**
 - Copy domain classes (User, Subscription, UserDatabase interface)
 - Migrate MemoryUserDatabase and MemoryDatabasePlugIn to Spring configuration
 - Create Spring beans for database access
-- Write unit tests for data layer
+- **Testing**: 
+  - Unit tests for all domain class methods
+  - Integration tests for database initialization and CRUD operations
+  - Verify data persistence across application restarts
+  - **Acceptance Criteria**: All existing user/subscription operations work identically to original
 
 **Phase 3: Controller Migration (3-5 days)**
 - Start with LogoffAction (simplest)
@@ -911,20 +916,35 @@ An incremental migration approach is recommended to minimize risk and allow for 
 - Migrate registration actions
 - Migrate subscription actions
 - Create form objects with Bean Validation
-- Write controller unit tests
+- **Testing**:
+  - Unit tests for each controller method using MockMvc
+  - Test valid and invalid form submissions
+  - Test authentication and session management
+  - Test error handling and validation messages
+  - **Acceptance Criteria**: Each controller passes all unit tests before proceeding to next
 
 **Phase 4: View Migration (3-5 days)**
 - Create Thymeleaf base layout
 - Convert header, footer, and menu fragments
 - Migrate each page template
 - Implement error display and validation messages
-- Test all user flows
+- **Testing**:
+  - Visual comparison testing against original application
+  - Test all form submissions render correctly
+  - Test error message display
+  - Test layout consistency across all pages
+  - **Acceptance Criteria**: Visual parity with original application
 
 **Phase 5: Integration and Testing (2-3 days)**
 - End-to-end testing of all features
 - Performance comparison
 - Security review
 - Documentation updates
+- **Testing**:
+  - Complete user journey tests (registration, login, subscription management, logout)
+  - Cross-browser testing
+  - Load testing comparison with original application
+  - **Acceptance Criteria**: All user flows complete successfully with equivalent behavior
 
 ### 4.2 Proof of Concept Recommendation
 
@@ -943,7 +963,496 @@ During migration, both applications can run simultaneously:
 - Spring Boot application on port 8081
 - Compare behavior and output for each migrated feature
 
-## 5. File Mapping
+## 5. Testing Strategy
+
+A robust testing strategy is essential for ensuring the migrated application maintains functional parity with the original. This section outlines the testing approach for each phase of the migration.
+
+### 5.1 Testing Framework and Tools
+
+The following testing tools should be used throughout the migration:
+
+| Tool | Purpose |
+|------|---------|
+| JUnit 5 | Unit testing framework |
+| Spring Boot Test | Integration testing with Spring context |
+| MockMvc | Controller testing without full server |
+| Mockito | Mocking dependencies |
+| AssertJ | Fluent assertions |
+| Selenium/Playwright | End-to-end browser testing |
+| JMeter/Gatling | Performance and load testing |
+| Testcontainers | Integration testing with containers (if needed) |
+
+**Test Dependencies (pom.xml):**
+```xml
+<dependencies>
+    <!-- Testing -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.seleniumhq.selenium</groupId>
+        <artifactId>selenium-java</artifactId>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
+```
+
+### 5.2 Unit Testing Requirements
+
+Unit tests should be written for every migrated component. Each test class should follow the naming convention `*Test.java` and be placed in the corresponding test package.
+
+**Controller Unit Tests:**
+
+Each controller method requires tests for:
+- Happy path (valid input, successful operation)
+- Validation failures (invalid form data)
+- Business logic errors (e.g., invalid credentials)
+- Edge cases (null values, empty strings, boundary conditions)
+
+Example test structure for LogonController:
+```java
+@WebMvcTest(LogonController.class)
+class LogonControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private UserDatabase userDatabase;
+
+    @Test
+    void showLogonForm_ShouldReturnLogonView() throws Exception {
+        mockMvc.perform(get("/editLogon"))
+            .andExpect(status().isOk())
+            .andExpect(view().name("logon"))
+            .andExpect(model().attributeExists("logonForm"));
+    }
+
+    @Test
+    void processLogon_WithValidCredentials_ShouldRedirectToMainMenu() throws Exception {
+        User user = new User();
+        user.setUsername("testuser");
+        user.setPassword("password");
+        when(userDatabase.findUser("testuser")).thenReturn(user);
+
+        mockMvc.perform(post("/logon")
+                .param("username", "testuser")
+                .param("password", "password"))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(redirectedUrl("/mainMenu"));
+    }
+
+    @Test
+    void processLogon_WithInvalidCredentials_ShouldReturnLogonWithError() throws Exception {
+        when(userDatabase.findUser("testuser")).thenReturn(null);
+
+        mockMvc.perform(post("/logon")
+                .param("username", "testuser")
+                .param("password", "wrongpassword"))
+            .andExpect(status().isOk())
+            .andExpect(view().name("logon"))
+            .andExpect(model().hasErrors());
+    }
+
+    @Test
+    void processLogon_WithBlankUsername_ShouldFailValidation() throws Exception {
+        mockMvc.perform(post("/logon")
+                .param("username", "")
+                .param("password", "password"))
+            .andExpect(status().isOk())
+            .andExpect(view().name("logon"))
+            .andExpect(model().attributeHasFieldErrors("logonForm", "username"));
+    }
+}
+```
+
+**Form Validation Tests:**
+
+Test all Bean Validation constraints:
+```java
+class RegistrationFormTest {
+
+    private Validator validator;
+
+    @BeforeEach
+    void setUp() {
+        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+        validator = factory.getValidator();
+    }
+
+    @Test
+    void validForm_ShouldHaveNoViolations() {
+        RegistrationForm form = new RegistrationForm();
+        form.setUsername("testuser");
+        form.setFullName("Test User");
+        form.setFromAddress("test@example.com");
+        form.setPassword("password");
+        form.setPassword2("password");
+
+        Set<ConstraintViolation<RegistrationForm>> violations = validator.validate(form);
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    void blankUsername_ShouldHaveViolation() {
+        RegistrationForm form = new RegistrationForm();
+        form.setUsername("");
+        // ... set other required fields
+
+        Set<ConstraintViolation<RegistrationForm>> violations = validator.validate(form);
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("username"));
+    }
+
+    @Test
+    void invalidEmail_ShouldHaveViolation() {
+        RegistrationForm form = new RegistrationForm();
+        form.setFromAddress("not-an-email");
+        // ... set other required fields
+
+        Set<ConstraintViolation<RegistrationForm>> violations = validator.validate(form);
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("fromAddress"));
+    }
+
+    @Test
+    void passwordMismatch_ShouldHaveViolation() {
+        RegistrationForm form = new RegistrationForm();
+        form.setPassword("password1");
+        form.setPassword2("password2");
+        // ... set other required fields
+
+        Set<ConstraintViolation<RegistrationForm>> violations = validator.validate(form);
+        assertThat(violations).isNotEmpty();
+    }
+}
+```
+
+**Data Layer Tests:**
+
+Test database operations:
+```java
+@SpringBootTest
+class MemoryUserDatabaseTest {
+
+    @Autowired
+    private UserDatabase userDatabase;
+
+    @Test
+    void findUser_WithExistingUser_ShouldReturnUser() {
+        User user = userDatabase.findUser("user");
+        assertThat(user).isNotNull();
+        assertThat(user.getUsername()).isEqualTo("user");
+    }
+
+    @Test
+    void findUser_WithNonExistingUser_ShouldReturnNull() {
+        User user = userDatabase.findUser("nonexistent");
+        assertThat(user).isNull();
+    }
+
+    @Test
+    void createUser_ShouldPersistUser() {
+        User user = userDatabase.createUser("newuser");
+        assertThat(user).isNotNull();
+        assertThat(userDatabase.findUser("newuser")).isNotNull();
+    }
+}
+```
+
+### 5.3 Integration Testing Requirements
+
+Integration tests verify that components work together correctly within the Spring context.
+
+**Application Context Test:**
+```java
+@SpringBootTest
+class ApplicationContextTest {
+
+    @Autowired
+    private ApplicationContext context;
+
+    @Test
+    void contextLoads() {
+        assertThat(context).isNotNull();
+    }
+
+    @Test
+    void allControllersAreLoaded() {
+        assertThat(context.getBean(LogonController.class)).isNotNull();
+        assertThat(context.getBean(RegistrationController.class)).isNotNull();
+        assertThat(context.getBean(SubscriptionController.class)).isNotNull();
+    }
+
+    @Test
+    void databaseIsInitialized() {
+        UserDatabase database = context.getBean(UserDatabase.class);
+        assertThat(database).isNotNull();
+        // Verify initial data is loaded
+        assertThat(database.findUser("user")).isNotNull();
+    }
+}
+```
+
+**Full Request Integration Tests:**
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+class LogonIntegrationTest {
+
+    @Autowired
+    private TestRestTemplate restTemplate;
+
+    @LocalServerPort
+    private int port;
+
+    @Test
+    void logonFlow_ShouldWorkEndToEnd() {
+        // Get logon page
+        ResponseEntity<String> response = restTemplate.getForEntity(
+            "http://localhost:" + port + "/editLogon", String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("Username");
+
+        // Submit valid credentials
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("username", "user");
+        params.add("password", "pass");
+        
+        ResponseEntity<String> loginResponse = restTemplate.postForEntity(
+            "http://localhost:" + port + "/logon", params, String.class);
+        assertThat(loginResponse.getStatusCode()).isEqualTo(HttpStatus.FOUND);
+    }
+}
+```
+
+### 5.4 End-to-End Testing Requirements
+
+End-to-end tests verify complete user journeys through the application using browser automation.
+
+**Test Scenarios:**
+
+| Scenario | Steps | Expected Result |
+|----------|-------|-----------------|
+| User Registration | Navigate to registration, fill form, submit | User created and logged in |
+| User Login | Navigate to login, enter credentials, submit | Redirected to main menu |
+| User Logout | Click logout from main menu | Session ended, redirected to welcome |
+| Add Subscription | Login, navigate to registration, add subscription | Subscription saved |
+| Edit Subscription | Login, navigate to subscription, modify, save | Changes persisted |
+| Delete Subscription | Login, navigate to subscription, delete | Subscription removed |
+| Invalid Login | Enter wrong credentials | Error message displayed |
+| Validation Errors | Submit form with invalid data | Field errors displayed |
+
+**Selenium Test Example:**
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+class UserJourneyE2ETest {
+
+    @LocalServerPort
+    private int port;
+
+    private WebDriver driver;
+
+    @BeforeEach
+    void setUp() {
+        driver = new ChromeDriver();
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (driver != null) {
+            driver.quit();
+        }
+    }
+
+    @Test
+    void completeUserJourney_RegisterLoginManageSubscriptionsLogout() {
+        String baseUrl = "http://localhost:" + port;
+
+        // 1. Navigate to welcome page
+        driver.get(baseUrl + "/welcome");
+        assertThat(driver.getTitle()).contains("Welcome");
+
+        // 2. Register new user
+        driver.findElement(By.linkText("Register")).click();
+        driver.findElement(By.name("username")).sendKeys("newuser");
+        driver.findElement(By.name("password")).sendKeys("password");
+        driver.findElement(By.name("password2")).sendKeys("password");
+        driver.findElement(By.name("fullName")).sendKeys("New User");
+        driver.findElement(By.name("fromAddress")).sendKeys("new@example.com");
+        driver.findElement(By.cssSelector("button[type='submit']")).click();
+
+        // 3. Verify logged in
+        assertThat(driver.getCurrentUrl()).contains("mainMenu");
+
+        // 4. Add subscription
+        driver.findElement(By.linkText("Add")).click();
+        driver.findElement(By.name("host")).sendKeys("mail.example.com");
+        driver.findElement(By.name("username")).sendKeys("mailuser");
+        driver.findElement(By.name("password")).sendKeys("mailpass");
+        driver.findElement(By.name("type")).sendKeys("imap");
+        driver.findElement(By.cssSelector("button[type='submit']")).click();
+
+        // 5. Verify subscription added
+        assertThat(driver.getPageSource()).contains("mail.example.com");
+
+        // 6. Logout
+        driver.findElement(By.linkText("Log off")).click();
+        assertThat(driver.getCurrentUrl()).contains("welcome");
+    }
+}
+```
+
+### 5.5 Regression Testing
+
+Regression testing ensures the migrated application behaves identically to the original.
+
+**Parallel Comparison Testing:**
+
+Run both applications simultaneously and compare responses:
+
+1. **Response Comparison**: For each endpoint, compare HTTP status codes, headers, and response structure
+2. **Form Behavior**: Submit identical form data to both applications and compare results
+3. **Session Handling**: Verify session creation, maintenance, and destruction behave identically
+4. **Error Messages**: Compare validation error messages for identical invalid inputs
+5. **Navigation Flows**: Verify all navigation paths produce equivalent results
+
+**Regression Test Checklist:**
+
+| Feature | Original Behavior | Migrated Behavior | Status |
+|---------|-------------------|-------------------|--------|
+| Login with valid credentials | Redirect to main menu | | |
+| Login with invalid credentials | Show error message | | |
+| Login with blank username | Show validation error | | |
+| Login with short password | Show length error | | |
+| Registration with new user | Create user, auto-login | | |
+| Registration with existing username | Show uniqueness error | | |
+| Registration with mismatched passwords | Show match error | | |
+| Edit user profile | Update and save | | |
+| Add subscription | Create subscription | | |
+| Edit subscription | Update subscription | | |
+| Delete subscription | Remove subscription | | |
+| Logout | Invalidate session | | |
+| Session timeout | Redirect to login | | |
+
+### 5.6 Performance Testing
+
+Compare performance metrics between original and migrated applications.
+
+**Metrics to Measure:**
+
+- Response time for each endpoint
+- Throughput (requests per second)
+- Memory usage under load
+- CPU utilization
+- Startup time
+
+**JMeter Test Plan Structure:**
+
+1. **Thread Group**: Simulate concurrent users (10, 50, 100)
+2. **HTTP Requests**: Cover all major endpoints
+3. **Assertions**: Verify response codes and content
+4. **Listeners**: Collect response times and throughput
+
+**Acceptance Criteria:**
+
+- Response times should not exceed 2x the original application
+- No memory leaks under sustained load
+- Application should handle at least equivalent concurrent users
+
+### 5.7 Test Coverage Requirements
+
+Maintain minimum test coverage thresholds:
+
+| Component | Minimum Coverage |
+|-----------|------------------|
+| Controllers | 90% |
+| Form Objects | 100% |
+| Services/Repositories | 85% |
+| Configuration Classes | 80% |
+| Overall | 85% |
+
+**Coverage Tools:**
+
+- JaCoCo for code coverage measurement
+- SonarQube for quality gates (optional)
+
+**Maven Configuration:**
+```xml
+<plugin>
+    <groupId>org.jacoco</groupId>
+    <artifactId>jacoco-maven-plugin</artifactId>
+    <version>0.8.11</version>
+    <executions>
+        <execution>
+            <goals>
+                <goal>prepare-agent</goal>
+            </goals>
+        </execution>
+        <execution>
+            <id>report</id>
+            <phase>test</phase>
+            <goals>
+                <goal>report</goal>
+            </goals>
+        </execution>
+        <execution>
+            <id>check</id>
+            <goals>
+                <goal>check</goal>
+            </goals>
+            <configuration>
+                <rules>
+                    <rule>
+                        <element>BUNDLE</element>
+                        <limits>
+                            <limit>
+                                <counter>LINE</counter>
+                                <value>COVEREDRATIO</value>
+                                <minimum>0.85</minimum>
+                            </limit>
+                        </limits>
+                    </rule>
+                </rules>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+### 5.8 Acceptance Criteria Summary
+
+Before each phase can be considered complete, the following acceptance criteria must be met:
+
+**Phase 1 (Project Setup):**
+- Application context loads without errors
+- All Spring Boot auto-configuration is working
+- Application starts and responds to health check
+
+**Phase 2 (Data Layer):**
+- All domain class unit tests pass
+- Database initialization works correctly
+- CRUD operations function identically to original
+- Data persists correctly
+
+**Phase 3 (Controllers):**
+- All controller unit tests pass (90%+ coverage)
+- Form validation works correctly
+- Error handling matches original behavior
+- Session management works correctly
+
+**Phase 4 (Views):**
+- All pages render correctly
+- Forms submit and display errors properly
+- Layout is consistent across all pages
+- Visual appearance matches original (within reason)
+
+**Phase 5 (Integration):**
+- All end-to-end tests pass
+- Performance is acceptable (within 2x of original)
+- No regressions in functionality
+- All user journeys complete successfully
+
+## 6. File Mapping
 
 ### 5.1 Configuration Files
 
