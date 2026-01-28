@@ -16,18 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.struts.webapp.example2.springboot.controller;
+package org.apache.struts.webapp.example2.controller;
 
-import javax.servlet.http.HttpSession;
-import javax.validation.Valid;
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.struts.webapp.example2.Constants;
 import org.apache.struts.webapp.example2.User;
 import org.apache.struts.webapp.example2.UserDatabase;
-import org.apache.struts.webapp.example2.springboot.form.RegistrationForm;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.apache.struts.webapp.example2.form.RegistrationForm;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -39,11 +38,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Controller
 public class RegistrationController {
 
-    private static final Log log = LogFactory.getLog(RegistrationController.class);
+    private static final Logger log = LoggerFactory.getLogger(RegistrationController.class);
 
     private final UserDatabase userDatabase;
 
-    @Autowired
     public RegistrationController(UserDatabase userDatabase) {
         this.userDatabase = userDatabase;
     }
@@ -55,7 +53,7 @@ public class RegistrationController {
             Model model) {
 
         if (log.isDebugEnabled()) {
-            log.debug("RegistrationController: Processing " + action + " action");
+            log.debug("RegistrationController: Processing {} action", action);
         }
 
         User user = null;
@@ -63,7 +61,7 @@ public class RegistrationController {
             user = (User) session.getAttribute(Constants.USER_KEY);
             if (user == null) {
                 if (log.isDebugEnabled()) {
-                    log.debug("User is not logged on in session " + session.getId());
+                    log.debug("User is not logged on in session {}", session.getId());
                 }
                 return "redirect:/editLogon";
             }
@@ -74,7 +72,7 @@ public class RegistrationController {
 
         if (user != null) {
             if (log.isTraceEnabled()) {
-                log.trace("Populating form from " + user);
+                log.trace("Populating form from {}", user);
             }
             registrationForm.setUsername(user.getUsername());
             registrationForm.setFullName(user.getFullName());
@@ -108,13 +106,13 @@ public class RegistrationController {
         }
 
         if (log.isDebugEnabled()) {
-            log.debug("RegistrationController: Processing save for " + action + " action");
+            log.debug("RegistrationController: Processing save for {} action", action);
         }
 
         User user = (User) session.getAttribute(Constants.USER_KEY);
         if (!"Create".equals(action) && user == null) {
             if (log.isTraceEnabled()) {
-                log.trace("User is not logged on in session " + session.getId());
+                log.trace("User is not logged on in session {}", session.getId());
             }
             return "redirect:/editLogon";
         }
@@ -181,7 +179,7 @@ public class RegistrationController {
         if ("Create".equals(action)) {
             session.setAttribute(Constants.USER_KEY, user);
             if (log.isTraceEnabled()) {
-                log.trace("User '" + user.getUsername() + "' logged on in session " + session.getId());
+                log.trace("User '{}' logged on in session {}", user.getUsername(), session.getId());
             }
         }
 

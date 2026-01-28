@@ -16,12 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.struts.webapp.example2.springboot.validation;
+package org.apache.struts.webapp.example2.validation;
 
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorContext;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
 
-import org.apache.struts.webapp.example2.springboot.form.RegistrationForm;
+import org.apache.struts.webapp.example2.form.RegistrationForm;
 
 public class PasswordMatchValidator implements ConstraintValidator<PasswordMatch, RegistrationForm> {
 

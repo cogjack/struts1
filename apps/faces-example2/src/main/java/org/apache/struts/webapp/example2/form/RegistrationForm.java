@@ -16,12 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.struts.webapp.example2.springboot.form;
+package org.apache.struts.webapp.example2.form;
 
-import javax.validation.constraints.Email;
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 
-import org.apache.struts.webapp.example2.springboot.validation.PasswordMatch;
+import org.apache.struts.webapp.example2.validation.PasswordMatch;
 
 @PasswordMatch
 public class RegistrationForm {

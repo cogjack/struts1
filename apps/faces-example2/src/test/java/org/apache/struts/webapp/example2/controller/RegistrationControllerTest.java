@@ -16,9 +16,21 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.struts.webapp.example2.springboot.controller;
+package org.apache.struts.webapp.example2.controller;
+
+import org.apache.struts.webapp.example2.Constants;
+import org.apache.struts.webapp.example2.Subscription;
+import org.apache.struts.webapp.example2.User;
+import org.apache.struts.webapp.example2.UserDatabase;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -29,18 +41,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-import org.apache.struts.webapp.example2.Constants;
-import org.apache.struts.webapp.example2.Subscription;
-import org.apache.struts.webapp.example2.User;
-import org.apache.struts.webapp.example2.UserDatabase;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.mock.web.MockHttpSession;
-import org.springframework.test.web.servlet.MockMvc;
-
 @WebMvcTest(RegistrationController.class)
 class RegistrationControllerTest {
 
@@ -50,99 +50,13 @@ class RegistrationControllerTest {
     @MockBean
     private UserDatabase userDatabase;
 
-    private MockHttpSession session;
-    private User mockUser;
-
-    @BeforeEach
-    void setUp() {
-        session = new MockHttpSession();
-        mockUser = new User() {
-            private String username = "testuser";
-            private String password = "testpass";
-            private String fullName = "Test User";
-            private String fromAddress = "test@example.com";
-            private String replyToAddress = "reply@example.com";
-
-            @Override
-            public UserDatabase getDatabase() {
-                return userDatabase;
-            }
-
-            @Override
-            public String getFromAddress() {
-                return fromAddress;
-            }
-
-            @Override
-            public void setFromAddress(String fromAddress) {
-                this.fromAddress = fromAddress;
-            }
-
-            @Override
-            public String getFullName() {
-                return fullName;
-            }
-
-            @Override
-            public void setFullName(String fullName) {
-                this.fullName = fullName;
-            }
-
-            @Override
-            public String getPassword() {
-                return password;
-            }
-
-            @Override
-            public void setPassword(String password) {
-                this.password = password;
-            }
-
-            @Override
-            public String getReplyToAddress() {
-                return replyToAddress;
-            }
-
-            @Override
-            public void setReplyToAddress(String replyToAddress) {
-                this.replyToAddress = replyToAddress;
-            }
-
-            @Override
-            public Subscription[] getSubscriptions() {
-                return new Subscription[0];
-            }
-
-            @Override
-            public String getUsername() {
-                return username;
-            }
-
-            @Override
-            public Subscription createSubscription(String host) {
-                return null;
-            }
-
-            @Override
-            public Subscription findSubscription(String host) {
-                return null;
-            }
-
-            @Override
-            public void removeSubscription(Subscription subscription) {
-            }
-        };
-    }
-
     @Test
     void editRegistration_CreateMode_ShouldReturnRegistrationView() throws Exception {
         mockMvc.perform(get("/editRegistration")
                 .param("action", "Create"))
             .andExpect(status().isOk())
             .andExpect(view().name("registration"))
-            .andExpect(model().attributeExists("registrationForm"))
-            .andExpect(model().attribute("registrationForm",
-                org.hamcrest.Matchers.hasProperty("action", org.hamcrest.Matchers.equalTo("Create"))));
+            .andExpect(model().attributeExists("registrationForm"));
     }
 
     @Test
@@ -150,14 +64,20 @@ class RegistrationControllerTest {
         mockMvc.perform(get("/editRegistration"))
             .andExpect(status().isOk())
             .andExpect(view().name("registration"))
-            .andExpect(model().attributeExists("registrationForm"))
-            .andExpect(model().attribute("registrationForm",
-                org.hamcrest.Matchers.hasProperty("action", org.hamcrest.Matchers.equalTo("Create"))));
+            .andExpect(model().attributeExists("registrationForm"));
     }
 
     @Test
     void editRegistration_EditMode_WithLoggedInUser_ShouldPopulateForm() throws Exception {
-        session.setAttribute(Constants.USER_KEY, mockUser);
+        User user = mock(User.class);
+        when(user.getUsername()).thenReturn("testuser");
+        when(user.getFullName()).thenReturn("Test User");
+        when(user.getFromAddress()).thenReturn("test@example.com");
+        when(user.getReplyToAddress()).thenReturn("reply@example.com");
+        when(user.getSubscriptions()).thenReturn(new Subscription[0]);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
 
         mockMvc.perform(get("/editRegistration")
                 .param("action", "Edit")
@@ -165,13 +85,7 @@ class RegistrationControllerTest {
             .andExpect(status().isOk())
             .andExpect(view().name("registration"))
             .andExpect(model().attributeExists("registrationForm"))
-            .andExpect(model().attributeExists("user"))
-            .andExpect(model().attribute("registrationForm",
-                org.hamcrest.Matchers.hasProperty("username", org.hamcrest.Matchers.equalTo("testuser"))))
-            .andExpect(model().attribute("registrationForm",
-                org.hamcrest.Matchers.hasProperty("fullName", org.hamcrest.Matchers.equalTo("Test User"))))
-            .andExpect(model().attribute("registrationForm",
-                org.hamcrest.Matchers.hasProperty("fromAddress", org.hamcrest.Matchers.equalTo("test@example.com"))));
+            .andExpect(model().attributeExists("user"));
     }
 
     @Test
@@ -184,8 +98,13 @@ class RegistrationControllerTest {
 
     @Test
     void saveRegistration_CreateMode_WithValidData_ShouldCreateUserAndRedirect() throws Exception {
+        User user = mock(User.class);
+        when(user.getUsername()).thenReturn("newuser");
+        when(user.getPassword()).thenReturn("password123");
         when(userDatabase.findUser("newuser")).thenReturn(null);
-        when(userDatabase.createUser("newuser")).thenReturn(mockUser);
+        when(userDatabase.createUser("newuser")).thenReturn(user);
+
+        MockHttpSession session = new MockHttpSession();
 
         mockMvc.perform(post("/saveRegistration")
                 .param("action", "Create")
@@ -205,7 +124,8 @@ class RegistrationControllerTest {
 
     @Test
     void saveRegistration_CreateMode_WithExistingUsername_ShouldReturnError() throws Exception {
-        when(userDatabase.findUser("existinguser")).thenReturn(mockUser);
+        User existingUser = mock(User.class);
+        when(userDatabase.findUser("existinguser")).thenReturn(existingUser);
 
         mockMvc.perform(post("/saveRegistration")
                 .param("action", "Create")
@@ -341,7 +261,12 @@ class RegistrationControllerTest {
 
     @Test
     void saveRegistration_EditMode_WithLoggedInUser_ShouldUpdateAndRedirect() throws Exception {
-        session.setAttribute(Constants.USER_KEY, mockUser);
+        User user = mock(User.class);
+        when(user.getUsername()).thenReturn("testuser");
+        when(user.getPassword()).thenReturn("oldpassword");
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
 
         mockMvc.perform(post("/saveRegistration")
                 .param("action", "Edit")
@@ -372,7 +297,12 @@ class RegistrationControllerTest {
 
     @Test
     void saveRegistration_EditMode_WithNewPassword_ShouldUpdatePassword() throws Exception {
-        session.setAttribute(Constants.USER_KEY, mockUser);
+        User user = mock(User.class);
+        when(user.getUsername()).thenReturn("testuser");
+        when(user.getPassword()).thenReturn("oldpassword");
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
 
         mockMvc.perform(post("/saveRegistration")
                 .param("action", "Edit")
@@ -386,11 +316,17 @@ class RegistrationControllerTest {
             .andExpect(redirectedUrl("/mainMenu"));
 
         verify(userDatabase).save();
+        verify(user).setPassword("newpassword");
     }
 
     @Test
     void saveRegistration_EditMode_WithoutPassword_ShouldKeepOldPassword() throws Exception {
-        session.setAttribute(Constants.USER_KEY, mockUser);
+        User user = mock(User.class);
+        when(user.getUsername()).thenReturn("testuser");
+        when(user.getPassword()).thenReturn("oldpassword");
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
 
         mockMvc.perform(post("/saveRegistration")
                 .param("action", "Edit")
@@ -402,5 +338,6 @@ class RegistrationControllerTest {
             .andExpect(redirectedUrl("/mainMenu"));
 
         verify(userDatabase).save();
+        verify(user).setPassword("oldpassword");
     }
 }

@@ -6,14 +6,19 @@
     <title th:text="${registrationForm.action == 'Create'} ? #{registration.title.create} : #{registration.title.edit}">Registration</title>
 </head>
 <body>
-    <div layout:fragment="content">
-        <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
-            <ul>
-                <li th:each="err : ${#fields.globalErrors()}" th:text="${err}">Global Error</li>
-            </ul>
-        </div>
+    <div layout:fragment="menu">
+        <div th:if="${user != null}" th:replace="~{fragments/loggedon-menu :: menu}"></div>
+        <div th:if="${user == null}" th:replace="~{fragments/loggedoff-menu :: menu}"></div>
+    </div>
 
+    <div layout:fragment="content">
         <form th:action="@{/saveRegistration}" th:object="${registrationForm}" method="post">
+            <div th:if="${#fields.hasGlobalErrors()}" class="error">
+                <ul>
+                    <li th:each="err : ${#fields.globalErrors()}" th:text="${err}">Global Error</li>
+                </ul>
+                <hr/>
+            </div>
             <input type="hidden" th:field="*{action}"/>
 
             <table class="form-background">
