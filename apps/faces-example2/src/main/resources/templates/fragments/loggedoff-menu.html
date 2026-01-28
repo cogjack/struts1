@@ -1,9 +1,5 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8"/>
-    <title>Logged Off Menu Fragment</title>
-</head>
 <body>
     <div th:fragment="menu">
         <table>
@@ -14,7 +10,7 @@
             </tr>
             <tr>
                 <td>
-                    <a th:href="@{/logon}" th:text="#{loggedoff.logon}">Log On</a>
+                    <a th:href="@{/editLogon}" th:text="#{loggedoff.logon}">Log On</a>
                 </td>
             </tr>
         </table>

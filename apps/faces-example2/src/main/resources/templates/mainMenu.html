@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title th:text="#{mainMenu.title}">MailReader Demonstration Application - Main Menu</title>
+</head>
+<body>
+    <div layout:fragment="menu">
+        <div th:replace="~{fragments/loggedon-menu :: menu}"></div>
+    </div>
+
+    <div layout:fragment="content">
+        <table>
+            <tr>
+                <th>
+                    <span th:text="#{mainMenu.heading}">Main Menu Options for </span>
+                    <span th:text="${session.user.username}">username</span>
+                </th>
+            </tr>
+            <tr>
+                <td>
+                    <a th:href="@{/editRegistration(action='Edit')}" th:text="#{mainMenu.registration}">Edit your user registration profile</a>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <a th:href="@{/logoff}" th:text="#{mainMenu.logoff}">Log off MailReader Demonstration Application</a>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>
