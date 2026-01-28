@@ -37,17 +37,22 @@
         <url>http://svn.apache.org/repos/asf/struts/struts1/trunk/apps/faces-example2/</url>
     </scm>
 
-   <dependencies>
-      <dependency>
-         <groupId>${project.groupId}</groupId>
-         <artifactId>struts-faces</artifactId>
-         <version>${project.version}</version>
-      </dependency>
-      <dependency>
-         <groupId>${project.groupId}</groupId>
-         <artifactId>struts-tiles</artifactId>
-         <version>${project.version}</version>
-      </dependency>
+   <properties>
+      <maven.compiler.source>17</maven.compiler.source>
+      <maven.compiler.target>17</maven.compiler.target>
+   </properties>
+
+      <dependencies>
+         <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>struts-faces</artifactId>
+            <version>${project.version}</version>
+         </dependency>
+         <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>struts-tiles</artifactId>
+            <version>${project.version}</version>
+         </dependency>
       <dependency>
          <groupId>javax.servlet</groupId>
          <artifactId>jstl</artifactId>
@@ -113,12 +118,7 @@
       </dependency>
    </dependencies>
    
-   <properties>
-      <maven.compiler.source>17</maven.compiler.source>
-      <maven.compiler.target>17</maven.compiler.target>
-   </properties>
-   
-   <build>
+<build>
       <resources>
          <resource>
             <directory>src/main/java</directory>
