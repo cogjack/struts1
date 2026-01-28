@@ -19,22 +19,22 @@
 
 package org.apache.struts.webapp.example2.controller;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.apache.struts.webapp.example2.Constants;
 import org.apache.struts.webapp.example2.User;
-import org.apache.struts.webapp.example2.memory.MemoryUser;
-import org.apache.struts.webapp.example2.memory.MemoryUserDatabase;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpSession;
 
 public class LogoffControllerTest {
 
     private LogoffController controller;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         controller = new LogoffController();
     }
@@ -51,14 +51,14 @@ public class LogoffControllerTest {
     @Test
     public void logoff_WithUserInSession_ShouldInvalidateSession() {
         MockHttpSession session = new MockHttpSession();
-        MemoryUserDatabase database = new MemoryUserDatabase();
-        User user = new MemoryUser(database, "testuser");
+        User user = mock(User.class);
+        when(user.getUsername()).thenReturn("testuser");
         session.setAttribute(Constants.USER_KEY, user);
         session.setAttribute(Constants.SUBSCRIPTION_KEY, "subscription");
 
         controller.logoff(session);
 
-        assertTrue("Session should be invalidated", session.isInvalid());
+        assertTrue(session.isInvalid(), "Session should be invalidated");
     }
 
     @Test
@@ -67,7 +67,7 @@ public class LogoffControllerTest {
 
         controller.logoff(session);
 
-        assertTrue("Session should be invalidated", session.isInvalid());
+        assertTrue(session.isInvalid(), "Session should be invalidated");
     }
 
 }

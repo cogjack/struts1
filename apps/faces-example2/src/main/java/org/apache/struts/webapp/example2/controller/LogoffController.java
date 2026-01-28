@@ -19,19 +19,19 @@
 
 package org.apache.struts.webapp.example2.controller;
 
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpSession;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.struts.webapp.example2.Constants;
 import org.apache.struts.webapp.example2.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 public class LogoffController {
 
-    private final Log log = LogFactory.getLog("org.apache.struts.webapp.Example");
+    private static final Logger log = LoggerFactory.getLogger(LogoffController.class);
 
     @GetMapping("/logoff")
     public String logoff(HttpSession session) {
@@ -39,12 +39,12 @@ public class LogoffController {
 
         if (user != null) {
             if (log.isDebugEnabled()) {
-                log.debug("LogoffController: User '" + user.getUsername() +
-                          "' logged off in session " + session.getId());
+                log.debug("LogoffController: User '{}' logged off in session {}", 
+                          user.getUsername(), session.getId());
             }
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("LogoffController: User logged off in session " +
+                log.debug("LogoffController: User logged off in session {}", 
                           session.getId());
             }
         }
