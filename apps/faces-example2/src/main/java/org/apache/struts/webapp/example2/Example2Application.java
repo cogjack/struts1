@@ -16,11 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.struts.webapp.example2;
 
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+/**
+ * Spring Boot main application class for the Struts Faces Example 2 migration.
+ * This class serves as the entry point for the Spring Boot application,
+ * replacing the traditional web.xml and servlet configuration.
+ *
+ * The @SpringBootApplication annotation enables:
+ * - @Configuration: Tags the class as a source of bean definitions
+ * - @EnableAutoConfiguration: Enables Spring Boot's auto-configuration
+ * - @ComponentScan: Enables component scanning in the current package and sub-packages
+ */
 @SpringBootApplication
-public class TestApplication {
+public class Example2Application {
+
+    public static void main(String[] args) {
+        SpringApplication.run(Example2Application.class, args);
+    }
 }
