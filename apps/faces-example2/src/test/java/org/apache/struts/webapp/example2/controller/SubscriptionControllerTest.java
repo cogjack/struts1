@@ -29,6 +29,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -38,16 +40,24 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(SubscriptionController.class)
+@Import(SubscriptionControllerTest.TestConfig.class)
 class SubscriptionControllerTest {
+
+    static class TestConfig {
+        @Bean
+        public List<LabelValueBean> serverTypes() {
+            return List.of(
+                new LabelValueBean("IMAP Protocol", "imap"),
+                new LabelValueBean("POP3 Protocol", "pop3")
+            );
+        }
+    }
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockBean
     private UserDatabase userDatabase;
-
-    @MockBean
-    private List<LabelValueBean> serverTypes;
 
     @Test
     void editSubscription_WithNoUser_ShouldRedirectToLogon() throws Exception {
