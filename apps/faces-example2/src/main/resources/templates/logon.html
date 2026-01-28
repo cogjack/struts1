@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title th:text="#{logon.title}">MailReader Demonstration Application - Logon</title>
+</head>
+<body>
+    <div layout:fragment="menu">
+        <div th:replace="~{fragments/loggedoff-menu :: menu}"></div>
+    </div>
+
+    <div layout:fragment="content">
+        <form th:action="@{/logon}" th:object="${logonForm}" method="post">
+            <div th:if="${#fields.hasGlobalErrors()}" class="error">
+                <ul>
+                    <li th:each="err : ${#fields.globalErrors()}" th:text="${err}">Error</li>
+                </ul>
+                <hr/>
+            </div>
+            <table class="form-background">
+                <tr class="form-header">
+                    <th colspan="2">
+                        <span th:text="#{logon.header}">Logon Form</span>
+                    </th>
+                </tr>
+                <tr>
+                    <td class="form-prompt">
+                        <label for="username" th:text="#{prompt.username}">Username:</label>
+                    </td>
+                    <td class="form-field">
+                        <input type="text" id="username" th:field="*{username}" size="16"/>
+                        <span th:if="${#fields.hasErrors('username')}" th:errors="*{username}" class="error"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-prompt">
+                        <label for="password" th:text="#{prompt.password}">Password:</label>
+                    </td>
+                    <td class="form-field">
+                        <input type="password" id="password" th:field="*{password}" size="16"/>
+                        <span th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="error"></span>
+                    </td>
+                </tr>
+                <tr class="form-footer">
+                    <td colspan="2">
+                        <button type="submit">Log On</button>
+                        <button type="reset">Reset</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <span th:text="#{logon.footer}">Enter your username and password, and press the Log On button</span>
+                    </td>
+                </tr>
+            </table>
+        </form>
+    </div>
+</body>
+</html>
