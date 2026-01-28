@@ -16,62 +16,29 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.struts.webapp.example2.springmvc.config;
+package org.apache.struts.webapp.example2.config;
 
-import java.util.Arrays;
 import java.util.List;
 
-import org.apache.struts.webapp.example2.UserDatabase;
-import org.apache.struts.webapp.example2.memory.MemoryUserDatabase;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.Resource;
-
-import javax.annotation.PreDestroy;
 
 @Configuration
 public class DatabaseConfiguration {
 
-    @Value("${app.database.path:classpath:database.xml}")
-    private Resource databasePath;
-
-    private MemoryUserDatabase database;
-
     @Bean
-    public UserDatabase userDatabase() throws Exception {
-        database = new MemoryUserDatabase();
-        if (databasePath != null && databasePath.exists()) {
-            database.setPathname(databasePath.getFile().getAbsolutePath());
-        }
-        database.open();
-        return database;
-    }
-
-    @Bean
-    public List<ServerType> serverTypes() {
-        return Arrays.asList(
-            new ServerType("IMAP Protocol", "imap"),
-            new ServerType("POP3 Protocol", "pop3")
+    public List<LabelValueBean> serverTypes() {
+        return List.of(
+            new LabelValueBean("IMAP Protocol", "imap"),
+            new LabelValueBean("POP3 Protocol", "pop3")
         );
     }
 
-    @PreDestroy
-    public void cleanup() {
-        if (database != null) {
-            try {
-                database.close();
-            } catch (Exception e) {
-                // Log error during cleanup
-            }
-        }
-    }
-
-    public static class ServerType {
+    public static class LabelValueBean {
         private final String label;
         private final String value;
 
-        public ServerType(String label, String value) {
+        public LabelValueBean(String label, String value) {
             this.label = label;
             this.value = value;
         }

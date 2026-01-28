@@ -16,22 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.struts.webapp.example2.springmvc.form;
+package org.apache.struts.webapp.example2.form;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Pattern;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 
-/**
- * Form bean for the subscription page. This form has the following fields:
- * <ul>
- * <li><b>action</b> - The maintenance action we are performing (Create, Delete, or Edit).</li>
- * <li><b>host</b> - The mail host for this subscription. [REQUIRED]</li>
- * <li><b>password</b> - The password for this subscription.</li>
- * <li><b>type</b> - The subscription type (imap, pop3) for this subscription. [REQUIRED]</li>
- * <li><b>username</b> - The username of this subscription. [REQUIRED]</li>
- * <li><b>autoConnect</b> - Whether to auto-connect at startup.</li>
- * </ul>
- */
 public class SubscriptionForm {
 
     private String action = "Create";

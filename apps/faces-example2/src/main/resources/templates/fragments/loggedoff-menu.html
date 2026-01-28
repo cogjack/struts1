@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <div th:fragment="menu">
+        <table>
+            <tr>
+                <td>
+                    <a th:href="@{/editRegistration(action='Create')}" th:text="#{loggedoff.register}">Register</a>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <a th:href="@{/editLogon}" th:text="#{loggedoff.logon}">Log On</a>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>
