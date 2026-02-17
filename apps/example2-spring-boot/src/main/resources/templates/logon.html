@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="#{logon.title}">Logon</title>
+</head>
+<body>
+    <h1 th:text="#{logon.header}">Logon Form</h1>
+    <div th:if="${#fields.hasGlobalErrors()}" th:each="err : ${#fields.globalErrors()}">
+        <span th:text="${err}" class="error">Error</span>
+    </div>
+    <form th:action="@{/logon}" th:object="${logonForm}" method="post">
+        <div>
+            <label th:text="#{prompt.username}">Username</label>
+            <input type="text" th:field="*{username}" />
+            <span th:if="${#fields.hasErrors('username')}" th:errors="*{username}" class="error">Username Error</span>
+        </div>
+        <div>
+            <label th:text="#{prompt.password}">Password</label>
+            <input type="password" th:field="*{password}" />
+            <span th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="error">Password Error</span>
+        </div>
+        <button type="submit" th:text="#{button.save}">Log On</button>
+    </form>
+</body>
+</html>
