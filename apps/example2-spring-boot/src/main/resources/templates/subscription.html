@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Subscription</title>
+</head>
+<body>
+    <h1>Subscription</h1>
+    <form th:action="@{/saveSubscription}" th:object="${subscriptionForm}" method="post">
+        <input type="hidden" th:field="*{action}" />
+        <div>
+            <label>Host:</label>
+            <input type="text" th:field="*{host}" />
+            <span th:if="${#fields.hasErrors('host')}" th:errors="*{host}"></span>
+        </div>
+        <div>
+            <label>Username:</label>
+            <input type="text" th:field="*{username}" />
+            <span th:if="${#fields.hasErrors('username')}" th:errors="*{username}"></span>
+        </div>
+        <div>
+            <label>Password:</label>
+            <input type="password" th:field="*{password}" />
+        </div>
+        <div>
+            <label>Type:</label>
+            <select th:field="*{type}">
+                <option th:each="serverType : ${serverTypes}"
+                        th:value="${serverType.value}"
+                        th:text="${serverType.label}"></option>
+            </select>
+            <span th:if="${#fields.hasErrors('type')}" th:errors="*{type}"></span>
+        </div>
+        <div>
+            <label>Auto-Connect:</label>
+            <input type="checkbox" th:field="*{autoConnect}" />
+        </div>
+        <button type="submit">Save</button>
+    </form>
+</body>
+</html>
