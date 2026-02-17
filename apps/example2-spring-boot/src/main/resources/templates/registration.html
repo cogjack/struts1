@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Registration</title>
+</head>
+<body>
+    <h1>Registration</h1>
+    <form th:action="@{/saveRegistration}" th:object="${registrationForm}" method="post">
+        <input type="hidden" th:field="*{action}" />
+        <div>
+            <label th:text="#{prompt.username}">Username</label>
+            <input type="text" th:field="*{username}" />
+            <span th:if="${#fields.hasErrors('username')}" th:errors="*{username}"></span>
+        </div>
+        <div>
+            <label th:text="#{prompt.fullName}">Full Name</label>
+            <input type="text" th:field="*{fullName}" />
+            <span th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></span>
+        </div>
+        <div>
+            <label th:text="#{prompt.fromAddress}">From Address</label>
+            <input type="text" th:field="*{fromAddress}" />
+            <span th:if="${#fields.hasErrors('fromAddress')}" th:errors="*{fromAddress}"></span>
+        </div>
+        <div>
+            <label th:text="#{prompt.replyToAddress}">Reply To Address</label>
+            <input type="text" th:field="*{replyToAddress}" />
+            <span th:if="${#fields.hasErrors('replyToAddress')}" th:errors="*{replyToAddress}"></span>
+        </div>
+        <div>
+            <label th:text="#{prompt.password}">Password</label>
+            <input type="password" th:field="*{password}" />
+            <span th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></span>
+        </div>
+        <div>
+            <label th:text="#{prompt.password2}">(Repeat) Password</label>
+            <input type="password" th:field="*{password2}" />
+            <span th:if="${#fields.hasErrors('password2')}" th:errors="*{password2}"></span>
+        </div>
+        <div>
+            <button type="submit" th:text="#{button.save}">Save</button>
+            <button type="reset" th:text="#{button.reset}">Reset</button>
+        </div>
+    </form>
+</body>
+</html>
