@@ -1,25 +1,52 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
 <head>
     <title th:text="#{logon.title}">Logon</title>
 </head>
 <body>
-    <h1 th:text="#{logon.header}">Logon Form</h1>
-    <div th:if="${#fields.hasGlobalErrors()}" th:each="err : ${#fields.globalErrors()}">
-        <span th:text="${err}" class="error">Error</span>
+    <div layout:fragment="menu">
+        <div th:replace="~{fragments/loggedoff-menu :: menu}"></div>
     </div>
-    <form th:action="@{/logon}" th:object="${logonForm}" method="post">
-        <div>
-            <label th:text="#{prompt.username}">Username</label>
-            <input type="text" th:field="*{username}" />
-            <span th:if="${#fields.hasErrors('username')}" th:errors="*{username}" class="error">Username Error</span>
-        </div>
-        <div>
-            <label th:text="#{prompt.password}">Password</label>
-            <input type="password" th:field="*{password}" />
-            <span th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="error">Password Error</span>
-        </div>
-        <button type="submit" th:text="#{button.save}">Log On</button>
-    </form>
+    <div layout:fragment="content">
+        <form th:action="@{/logon}" th:object="${logonForm}" method="post">
+            <table class="form-background">
+                <tr>
+                    <th colspan="2" class="form-header" th:text="#{logon.header}">Logon Form</th>
+                </tr>
+                <tr>
+                    <td class="form-prompt"><label for="username" th:text="#{prompt.username}">Username</label></td>
+                    <td class="form-field">
+                        <input type="text" th:field="*{username}" id="username" size="16" />
+                        <span th:if="${#fields.hasErrors('username')}" th:errors="*{username}" class="error"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-prompt"><label for="password" th:text="#{prompt.password}">Password</label></td>
+                    <td class="form-field">
+                        <input type="password" th:field="*{password}" id="password" size="16" />
+                        <span th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="error"></span>
+                    </td>
+                </tr>
+                <tr th:if="${#fields.hasGlobalErrors()}">
+                    <td colspan="2" class="form-field">
+                        <span th:each="err : ${#fields.globalErrors()}" th:text="${err}" class="error"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-field">
+                        <button type="submit" class="command-single">Log On</button>
+                    </td>
+                    <td class="form-field">
+                        <button type="reset" class="command-single">Reset</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" class="form-footer" th:text="#{logon.footer}">Enter your username and password</td>
+                </tr>
+            </table>
+        </form>
+    </div>
 </body>
 </html>
