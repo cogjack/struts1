@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="#{index.title}">MailReader</title>
+</head>
+<body>
+    <h1 th:text="#{index.heading}">MailReader Demonstration Application Options</h1>
+    <ul>
+        <li><a th:href="@{/editLogon}" th:text="#{index.logon}">Log on</a></li>
+        <li><a th:href="@{/editRegistration?action=Create}" th:text="#{index.registration}">Register</a></li>
+    </ul>
+</body>
+</html>

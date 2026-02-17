@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="#{mainMenu.title}">Main Menu</title>
+</head>
+<body>
+    <h1 th:text="#{mainMenu.heading}">Main Menu Options</h1>
+    <ul>
+        <li><a th:href="@{/editRegistration?action=Edit}" th:text="#{mainMenu.registration}">Edit Registration</a></li>
+        <li><a th:href="@{/logoff}" th:text="#{mainMenu.logoff}">Log Off</a></li>
+    </ul>
+</body>
+</html>
