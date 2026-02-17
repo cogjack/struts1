@@ -1,13 +1,23 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
 <head>
     <title th:text="#{mainMenu.title}">Main Menu</title>
 </head>
 <body>
-    <h1 th:text="#{mainMenu.heading}">Main Menu Options</h1>
-    <ul>
-        <li><a th:href="@{/editRegistration?action=Edit}" th:text="#{mainMenu.registration}">Edit Registration</a></li>
-        <li><a th:href="@{/logoff}" th:text="#{mainMenu.logoff}">Log Off</a></li>
-    </ul>
+    <div layout:fragment="menu">
+        <div th:replace="~{fragments/loggedon-menu :: menu}"></div>
+    </div>
+    <div layout:fragment="content">
+        <h3>
+            <span th:text="#{mainMenu.heading}">Main Menu Options for </span>
+            <span th:text="${session.user.username}">username</span>
+        </h3>
+        <ul>
+            <li><a th:href="@{/editRegistration(action='Edit')}" th:text="#{mainMenu.registration}">Edit your user registration profile</a></li>
+            <li><a th:href="@{/logoff}" th:text="#{mainMenu.logoff}">Log off MailReader Demonstration Application</a></li>
+        </ul>
+    </div>
 </body>
 </html>
