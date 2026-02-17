@@ -8,8 +8,12 @@
 </head>
 <body>
     <div layout:fragment="menu">
-        <div th:if="${session.user != null}" th:replace="~{fragments/loggedon-menu :: menu}"></div>
-        <div th:if="${session.user == null}" th:replace="~{fragments/loggedoff-menu :: menu}"></div>
+        <th:block th:if="${session.user != null}">
+            <div th:replace="~{fragments/loggedon-menu :: menu}"></div>
+        </th:block>
+        <th:block th:if="${session.user == null}">
+            <div th:replace="~{fragments/loggedoff-menu :: menu}"></div>
+        </th:block>
     </div>
     <div layout:fragment="content">
         <form th:action="@{/saveRegistration}" th:object="${registrationForm}" method="post">
