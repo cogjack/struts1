@@ -29,7 +29,7 @@
                         <label for="username" th:text="#{prompt.username}">Username:</label>
                     </td>
                     <td class="form-field">
-                        <input type="text" id="username" th:field="*{username}" size="16"/>
+                        <input type="text" id="username" th:field="*{username}" size="16" autofocus="autofocus"/>
                         <span th:if="${#fields.hasErrors('username')}" th:errors="*{username}" class="error"></span>
                     </td>
                 </tr>
@@ -44,8 +44,8 @@
                 </tr>
                 <tr class="form-footer">
                     <td colspan="2">
-                        <button type="submit">Log On</button>
-                        <button type="reset">Reset</button>
+                        <button type="submit" th:text="#{button.logon}">Log On</button>
+                        <button type="reset" th:text="#{button.reset}">Reset</button>
                     </td>
                 </tr>
                 <tr>
