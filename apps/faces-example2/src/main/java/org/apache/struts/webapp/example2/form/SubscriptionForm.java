@@ -28,6 +28,7 @@ public class SubscriptionForm {
     @NotBlank(message = "{error.host.required}")
     private String host;
 
+    @NotBlank(message = "{error.password.required}")
     private String password;
 
     @NotBlank(message = "{error.type.required}")

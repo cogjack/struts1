@@ -79,6 +79,16 @@ class SubscriptionFormTest {
     }
 
     @Test
+    void blankPassword_ShouldHaveViolation() {
+        SubscriptionForm form = createValidForm();
+        form.setPassword("");
+
+        Set<ConstraintViolation<SubscriptionForm>> violations = validator.validate(form);
+
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("password"));
+    }
+
+    @Test
     void blankType_ShouldHaveViolation() {
         SubscriptionForm form = createValidForm();
         form.setType("");
