@@ -271,6 +271,24 @@ class SubscriptionControllerTest {
     }
 
     @Test
+    void saveSubscription_CreateAction_WithBlankPassword_ShouldShowValidationError() throws Exception {
+        User user = mock(User.class);
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+
+        mockMvc.perform(post("/saveSubscription")
+                .param("action", "Create")
+                .param("host", "mail.example.com")
+                .param("username", "mailuser")
+                .param("password", "")
+                .param("type", "imap")
+                .session(session))
+            .andExpect(status().isOk())
+            .andExpect(view().name("subscription"))
+            .andExpect(model().attributeHasFieldErrors("subscriptionForm", "password"));
+    }
+
+    @Test
     void saveSubscription_CreateAction_WithInvalidType_ShouldShowValidationError() throws Exception {
         User user = mock(User.class);
         MockHttpSession session = new MockHttpSession();
