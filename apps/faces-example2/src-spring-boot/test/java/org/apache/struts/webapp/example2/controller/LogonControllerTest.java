@@ -18,7 +18,6 @@
  */
 package org.apache.struts.webapp.example2.controller;
 
-import org.apache.struts.webapp.example2.domain.MemoryUser;
 import org.apache.struts.webapp.example2.domain.MemoryUserDatabase;
 import org.apache.struts.webapp.example2.domain.User;
 import org.apache.struts.webapp.example2.domain.UserDatabase;
