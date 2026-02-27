@@ -16,11 +16,20 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.struts.webapp.example2;
 
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+/**
+ * Spring Boot main application class for the Struts Faces Example 2 migration.
+ * This class serves as the entry point for the Spring Boot application,
+ * replacing the traditional web.xml and servlet configuration.
+ */
 @SpringBootApplication
-public class TestApplication {
+public class Application {
+
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
 }
