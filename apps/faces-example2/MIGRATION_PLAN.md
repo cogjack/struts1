@@ -1811,3 +1811,76 @@ public class LogonController {
 </body>
 </html>
 ```
+
+## Updated Migration Session Plan
+
+This section consolidates and documents the updated analysis from the recent review of the Struts-to-Spring Boot migration.
+
+### 1. Migration Order (Simplest → Most Complex)
+
+The recommended implementation order is:
+
+1. `LogoffAction` → `LogoffController` *(Low Risk — no form, just session invalidation)*
+2. `LogonAction` → `LogonController` *(Medium Risk — DynaValidatorForm → typed POJO)*
+3. `EditRegistrationAction` + `SaveRegistrationAction` → `RegistrationController` *(Medium-High Risk — cross-field validation, create/edit mode)*
+4. `EditSubscriptionAction` + `SaveSubscriptionAction` → `SubscriptionController` *(Medium-High Risk — CRUD dispatch via `action` field)*
+
+### 2. Risk Assessment Per Action
+
+| Action/Connector | Risk Level | Key Concern |
+|---|---|---|
+| `LogoffAction` | Low | None |
+| `LogonAction` | Medium | `DynaValidatorForm` → typed POJO conversion; session attribute key must match what other controllers expect |
+| `EditRegistrationAction` | Medium-High | Cross-field password validation (`@PasswordMatch`), create vs. edit mode |
+| `SaveRegistrationAction` | Medium-High | *(merged into `RegistrationController`)* |
+| `EditSubscriptionAction` | Medium-High | CRUD dispatch via `action` field must be made explicit |
+| `SaveSubscriptionAction` | Medium-High | *(merged into `SubscriptionController`)* |
+| `MemoryDatabasePlugIn` | Low | Lifecycle mapping (`init`/`destroy` → `@Bean` + `@PreDestroy`) |
+
+### 3. Key Architectural Changes to Document
+
+- **`FacesTilesRequestProcessor` is fully eliminated** — Spring's `DispatcherServlet` replaces it entirely.
+- **JSF Backing Beans (`LoggedOff`, `LoggedOn`, `RegistrationBacking`) are eliminated** — navigation moves to controller return values and Thymeleaf template links.
+- **Form migration mapping:**
+
+| Struts Form | Spring Form | Notes |
+|---|---|---|
+| `logonForm` (`DynaValidatorForm`) | `LogonForm` (POJO) | Convert dynamic properties to typed fields |
+| `registrationForm` (`ValidatorForm`) | `RegistrationForm` (POJO) | Add `@PasswordMatch` for cross-field validation |
+| `subscriptionForm` (`ActionForm`) | `SubscriptionForm` (POJO) | Move `validate()` logic to annotations |
+
+- **Validation migration mapping** (`validation.xml` → Bean Validation annotations):
+
+| Struts Validator | Bean Validation | Notes |
+|---|---|---|
+| `required` | `@NotBlank` / `@NotNull` | Use `@NotBlank` for strings |
+| `minlength` | `@Size(min=X)` | Combined with maxlength |
+| `maxlength` | `@Size(max=X)` | Combined with minlength |
+| `email` | `@Email` | Built-in annotation |
+| `mask` (regex) | `@Pattern` | Regular expression validation |
+
+- **`MemoryDatabasePlugIn` → `DatabaseConfiguration`** (`@Configuration` class with `@Bean` for `UserDatabase` and server types list, and `@PreDestroy` for cleanup).
+
+### 4. Test Strategy Per Phase
+
+**Testing Tools:**
+
+| Tool | Purpose |
+|---|---|
+| JUnit 5 | Unit testing framework |
+| Spring Boot Test | Integration testing with Spring context |
+| MockMvc | Controller testing without full server |
+| Mockito | Mocking dependencies |
+| AssertJ | Fluent assertions |
+| Selenium/Playwright | End-to-end browser testing |
+| JMeter/Gatling | Performance and load testing |
+
+**Per-Controller Test Approach:**
+
+- **`LogoffController`**: MockMvc test verifying session is invalidated and redirect occurs to logon/welcome page.
+- **`LogonController`**: `@WebMvcTest` with MockMvc — test GET (form display), POST with valid credentials (redirect to `/mainMenu`), POST with invalid credentials (return to logon view with error).
+- **`RegistrationController`**: MockMvc tests for GET (form pre-population in edit mode), POST with valid data, POST with mismatched passwords, POST with missing required fields.
+- **`SubscriptionController`**: MockMvc tests for each CRUD operation (create, edit, delete), validation failures, and missing subscription scenarios.
+- **`DatabaseConfiguration`**: `@SpringBootTest` verifying `UserDatabase` bean is initialized and pre-loaded data (e.g., user `"user"`) is accessible.
+
+**Parallel Running Strategy:** During migration, run both apps simultaneously — original on port `8080`, Spring Boot on port `8081` — to compare behavior for each migrated feature.
