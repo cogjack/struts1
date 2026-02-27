@@ -1,6 +1,4 @@
 /*
- * $Id$
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,61 +16,50 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-
 package org.apache.struts.webapp.example2.memory;
-
 
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.HashMap;
-import org.apache.commons.digester.Digester;
-import org.apache.commons.digester.ObjectCreationFactory;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.Map;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.apache.struts.webapp.example2.Subscription;
 import org.apache.struts.webapp.example2.User;
 import org.apache.struts.webapp.example2.UserDatabase;
-import org.xml.sax.Attributes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
 
 /**
  * <p>Concrete implementation of {@link UserDatabase} for an in-memory
  * database backed by an XML data file.</p>
  *
+ * <p>This implementation has been adapted for Spring Boot, removing dependencies
+ * on Apache Commons Digester and using standard Java XML parsing instead.</p>
+ *
  * @author Craig R. McClanahan
- * @version $Rev$ $Date$
  * @since Struts 1.1
  */
-
 public final class MemoryUserDatabase implements UserDatabase {
 
-
-    // ----------------------------------------------------------- Constructors
-
-
-    // ----------------------------------------------------- Instance Variables
-
-
-    /**
-     * Logging output for this user database instance.
-     */
-    private Log log = LogFactory.getLog(this.getClass());
-
+    private static final Logger log = LoggerFactory.getLogger(MemoryUserDatabase.class);
 
     /**
      * The {@link User}s associated with this UserDatabase, keyed by username.
      */
-    private HashMap users = new HashMap();
-
-
-    // ------------------------------------------------------------- Properties
-
+    private final Map<String, User> users = new HashMap<>();
 
     /**
      * Absolute pathname to the persistent file we use for loading and storing
@@ -85,204 +72,200 @@ public final class MemoryUserDatabase implements UserDatabase {
     private String pathnameNew = null;
 
     public String getPathname() {
-        return (this.pathname);
+        return this.pathname;
     }
 
     public void setPathname(String pathname) {
         this.pathname = pathname;
-        pathnameOld = pathname + ".old";
-        pathnameNew = pathname + ".new";
+        this.pathnameOld = pathname + ".old";
+        this.pathnameNew = pathname + ".new";
     }
 
-
-    // --------------------------------------------------------- Public Methods
-
-
-    /**
-     * <p>Finalize access to the underlying persistence layer.</p>
-     *
-     * @exception Exception if a database access error occurs
-     */
+    @Override
     public void close() throws Exception {
-
         save();
-
     }
 
-
-    /**
-     * <p>Create and return a new {@link User} defined in this user database.
-     * </p>
-     *
-     * @param username Username of the new user
-     *
-     * @exception IllegalArgumentExceptionif the specified username
-     *  is not unique
-     */
+    @Override
     public User createUser(String username) {
-
         synchronized (users) {
             if (users.get(username) != null) {
-                throw new IllegalArgumentException("Duplicate user '" +
-                                                   username + "'");
+                throw new IllegalArgumentException("Duplicate user '" + username + "'");
             }
-            if (log.isTraceEnabled()) {
-                log.trace("Creating user '" + username + "'");
-            }
+            log.trace("Creating user '{}'", username);
             MemoryUser user = new MemoryUser(this, username);
-            synchronized (users) {
-                users.put(username, user);
-            }
-            return (user);
+            users.put(username, user);
+            return user;
         }
-
     }
 
-
-    /**
-     * <p>Return the existing {@link User} with the specified username,
-     * if any; otherwise return <code>null</code>.</p>
-     *
-     * @param username Username of the user to retrieve
-     */
+    @Override
     public User findUser(String username) {
-
         synchronized (users) {
-            return ((User) users.get(username));
+            return users.get(username);
         }
-
     }
 
-
-    /**
-     * <p>Return the set of {@link User}s defined in this user database.</p>
-     */
+    @Override
     public User[] findUsers() {
-
         synchronized (users) {
-            User results[] = new User[users.size()];
-            return ((User[]) users.values().toArray(results));
+            User[] results = new User[users.size()];
+            return users.values().toArray(results);
         }
-
     }
-
 
     /**
      * <p>Initiate access to the underlying persistence layer.</p>
+     * Uses standard Java DOM parsing instead of Apache Commons Digester.
      *
-     * @exception Exception if a database access error occurs
+     * @throws Exception if a database access error occurs
      */
+    @Override
     public void open() throws Exception {
-
-        FileInputStream fis = null;
+        InputStream is = null;
         BufferedInputStream bis = null;
 
         try {
+            log.debug("Loading database from '{}'", pathname);
 
-            // Acquire an input stream to our database file
-            if (log.isDebugEnabled()) {
-                log.debug("Loading database from '" + pathname + "'");
+            File file = new File(pathname);
+            if (file.exists()) {
+                is = new FileInputStream(file);
+            } else {
+                is = getClass().getClassLoader().getResourceAsStream(pathname);
+                if (is == null) {
+                    throw new IOException("Cannot find database file: " + pathname);
+                }
             }
-            fis = new FileInputStream(pathname);
-            bis = new BufferedInputStream(fis);
+            bis = new BufferedInputStream(is);
 
-            // Construct a digester to use for parsing
-            Digester digester = new Digester();
-            digester.push(this);
-            digester.setValidating(false);
-            digester.addFactoryCreate
-                ("database/user",
-                 new MemoryUserCreationFactory(this));
-            digester.addFactoryCreate
-                ("database/user/subscription",
-                 new MemorySubscriptionCreationFactory(this));
-
-            // Parse the input stream to initialize our database
-            digester.parse(bis);
-            bis.close();
-            bis = null;
-            fis = null;
+            parseDatabase(bis);
 
         } catch (Exception e) {
-
-            log.error("Loading database from '" + pathname + "':", e);
+            log.error("Loading database from '{}': {}", pathname, e.getMessage());
             throw e;
-
         } finally {
-
             if (bis != null) {
                 try {
                     bis.close();
                 } catch (Throwable t) {
-                    ;
+                    // Ignore
                 }
-                bis = null;
-                fis = null;
             }
-
         }
-
     }
 
+    /**
+     * Load the database from an InputStream. This is useful for loading from classpath resources.
+     *
+     * @param inputStream The input stream to load from
+     * @throws Exception if a database access error occurs
+     */
+    public void open(InputStream inputStream) throws Exception {
+        BufferedInputStream bis = null;
+
+        try {
+            log.debug("Loading database from input stream");
+            bis = new BufferedInputStream(inputStream);
+
+            parseDatabase(bis);
+
+        } catch (Exception e) {
+            log.error("Loading database from input stream: {}", e.getMessage());
+            throw e;
+        } finally {
+            if (bis != null) {
+                try {
+                    bis.close();
+                } catch (Throwable t) {
+                    // Ignore
+                }
+            }
+        }
+    }
 
     /**
-     * Remove the specified {@link User} from this database.
-     *
-     * @param user User to be removed
-     *
-     * @exception IllegalArgumentException if the specified user is not
-     *  associated with this database
+     * Parse the database XML from the given input stream using DOM.
      */
-    public void removeUser(User user) {
+    private void parseDatabase(InputStream inputStream) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        Document document = builder.parse(inputStream);
 
-        if (!(this == user.getDatabase())) {
-            throw new IllegalArgumentException
-                ("User not associated with this database");
+        Element root = document.getDocumentElement();
+        NodeList userNodes = root.getElementsByTagName("user");
+
+        for (int i = 0; i < userNodes.getLength(); i++) {
+            Element userElement = (Element) userNodes.item(i);
+            String username = userElement.getAttribute("username");
+            User user = createUser(username);
+            user.setFromAddress(getAttributeOrNull(userElement, "fromAddress"));
+            user.setFullName(getAttributeOrNull(userElement, "fullName"));
+            user.setPassword(getAttributeOrNull(userElement, "password"));
+            user.setReplyToAddress(getAttributeOrNull(userElement, "replyToAddress"));
+
+            NodeList subscriptionNodes = userElement.getElementsByTagName("subscription");
+            for (int j = 0; j < subscriptionNodes.getLength(); j++) {
+                Element subElement = (Element) subscriptionNodes.item(j);
+                String host = subElement.getAttribute("host");
+                Subscription subscription = user.createSubscription(host);
+
+                String autoConnect = getAttributeOrNull(subElement, "autoConnect");
+                if ("true".equalsIgnoreCase(autoConnect) || "yes".equalsIgnoreCase(autoConnect)) {
+                    subscription.setAutoConnect(true);
+                } else {
+                    subscription.setAutoConnect(false);
+                }
+                subscription.setPassword(getAttributeOrNull(subElement, "password"));
+                subscription.setType(getAttributeOrNull(subElement, "type"));
+                subscription.setUsername(getAttributeOrNull(subElement, "username"));
+            }
         }
-        if (log.isTraceEnabled()) {
-            log.trace("Removing user '" + user.getUsername() + "'");
+    }
+
+    private String getAttributeOrNull(Element element, String attributeName) {
+        String value = element.getAttribute(attributeName);
+        return value.isEmpty() ? null : value;
+    }
+
+    @Override
+    public void removeUser(User user) {
+        if (this != user.getDatabase()) {
+            throw new IllegalArgumentException("User not associated with this database");
         }
+        log.trace("Removing user '{}'", user.getUsername());
         synchronized (users) {
             users.remove(user.getUsername());
         }
-
     }
 
-
-    /**
-     * <p>Save any pending changes to the underlying persistence layer.</p>
-     *
-     * @exception Exception if a database access error occurs
-     */
+    @Override
     public void save() throws Exception {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Saving database to '" + pathname + "'");
+        if (pathname == null) {
+            log.debug("No pathname set, skipping save");
+            return;
         }
+
+        log.debug("Saving database to '{}'", pathname);
         File fileNew = new File(pathnameNew);
         PrintWriter writer = null;
 
         try {
-
-            // Configure our PrintWriter
             FileOutputStream fos = new FileOutputStream(fileNew);
             OutputStreamWriter osw = new OutputStreamWriter(fos);
             writer = new PrintWriter(osw);
 
-            // Print the file prolog
             writer.println("<?xml version='1.0'?>");
             writer.println("<database>");
 
-            // Print entries for each defined user and associated subscriptions
-            User users[] = findUsers();
-            for (int i = 0; i < users.length; i++) {
+            User[] allUsers = findUsers();
+            for (User user : allUsers) {
                 writer.print("  ");
-                writer.println(users[i]);
-                Subscription subscriptions[] =
-                    users[i].getSubscriptions();
-                for (int j = 0; j < subscriptions.length; j++) {
+                writer.println(user);
+                Subscription[] subscriptions = user.getSubscriptions();
+                for (Subscription subscription : subscriptions) {
                     writer.print("    ");
-                    writer.println(subscriptions[j]);
+                    writer.println(subscription);
                     writer.print("    ");
                     writer.println("</subscription>");
                 }
@@ -290,126 +273,38 @@ public final class MemoryUserDatabase implements UserDatabase {
                 writer.println("</user>");
             }
 
-            // Print the file epilog
             writer.println("</database>");
 
-            // Check for errors that occurred while printing
             if (writer.checkError()) {
                 writer.close();
                 fileNew.delete();
-                throw new IOException
-                    ("Saving database to '" + pathname + "'");
+                throw new IOException("Saving database to '" + pathname + "'");
             }
             writer.close();
             writer = null;
 
         } catch (IOException e) {
-
             if (writer != null) {
                 writer.close();
             }
             fileNew.delete();
             throw e;
-
         }
 
-
-        // Perform the required renames to permanently save this file
         File fileOrig = new File(pathname);
         File fileOld = new File(pathnameOld);
         if (fileOrig.exists()) {
             fileOld.delete();
             if (!fileOrig.renameTo(fileOld)) {
-                throw new IOException
-                    ("Renaming '" + pathname + "' to '" + pathnameOld + "'");
+                throw new IOException("Renaming '" + pathname + "' to '" + pathnameOld + "'");
             }
         }
         if (!fileNew.renameTo(fileOrig)) {
             if (fileOld.exists()) {
                 fileOld.renameTo(fileOrig);
             }
-            throw new IOException
-                ("Renaming '" + pathnameNew + "' to '" + pathname + "'");
+            throw new IOException("Renaming '" + pathnameNew + "' to '" + pathname + "'");
         }
         fileOld.delete();
-
     }
-
-
-}
-
-
-/**
- * Digester object creation factory for subscription instances.
- */
-class MemorySubscriptionCreationFactory implements ObjectCreationFactory {
-
-    public MemorySubscriptionCreationFactory(MemoryUserDatabase database) {
-    }
-
-
-    private Digester digester = null;
-
-    public Digester getDigester() {
-        return (this.digester);
-    }
-
-    public void setDigester(Digester digester) {
-        this.digester = digester;
-    }
-
-    public Object createObject(Attributes attributes) {
-        String host = attributes.getValue("host");
-        User user = (User) digester.peek();
-        Subscription subscription = user.createSubscription(host);
-        String autoConnect = attributes.getValue("autoConnect");
-        if (autoConnect == null) {
-            autoConnect = "false";
-        }
-        if ("true".equalsIgnoreCase(autoConnect) ||
-            "yes".equalsIgnoreCase(autoConnect)) {
-            subscription.setAutoConnect(true);
-        } else {
-            subscription.setAutoConnect(false);
-        }
-        subscription.setPassword(attributes.getValue("password"));
-        subscription.setType(attributes.getValue("type"));
-        subscription.setUsername(attributes.getValue("username"));
-        return (subscription);
-    }
-
-}
-
-
-/**
- * Digester object creation factory for user instances.
- */
-class MemoryUserCreationFactory implements ObjectCreationFactory {
-
-    public MemoryUserCreationFactory(MemoryUserDatabase database) {
-        this.database = database;
-    }
-
-    private MemoryUserDatabase database = null;
-
-    private Digester digester = null;
-
-    public Digester getDigester() {
-        return (this.digester);
-    }
-
-    public void setDigester(Digester digester) {
-        this.digester = digester;
-    }
-
-    public Object createObject(Attributes attributes) {
-        String username = attributes.getValue("username");
-        User user = database.createUser(username);
-        user.setFromAddress(attributes.getValue("fromAddress"));
-        user.setFullName(attributes.getValue("fullName"));
-        user.setPassword(attributes.getValue("password"));
-        user.setReplyToAddress(attributes.getValue("replyToAddress"));
-        return (user);
-    }
-
 }
