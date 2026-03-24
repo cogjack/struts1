@@ -37,11 +37,27 @@
         <url>http://svn.apache.org/repos/asf/struts/struts1/trunk/apps/faces-example1/</url>
     </scm>
 
+   <properties>
+      <struts.version>1.4.0-SNAPSHOT</struts.version>
+   </properties>
+
+   <dependencyManagement>
+      <dependencies>
+         <dependency>
+            <groupId>org.apache.struts</groupId>
+            <artifactId>struts-bom</artifactId>
+            <version>${struts.version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+         </dependency>
+      </dependencies>
+   </dependencyManagement>
+
    <dependencies>
       <dependency>
-         <groupId>${project.groupId}</groupId>
+         <groupId>org.apache.struts</groupId>
          <artifactId>struts-faces</artifactId>
-         <version>${project.version}</version>
+         <version>${struts.version}</version>
       </dependency>
       <dependency>
          <groupId>javax.servlet</groupId>
@@ -54,7 +70,6 @@
       <dependency>
          <groupId>myfaces</groupId>
          <artifactId>myfaces-impl</artifactId>
-         <version>${myfaces.version}</version>
       </dependency>
       <dependency>
          <groupId>myfaces</groupId>

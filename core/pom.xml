@@ -24,8 +24,9 @@
 
     <parent>
         <groupId>org.apache.struts</groupId>
-        <artifactId>struts-parent</artifactId>
+        <artifactId>struts-build-parent</artifactId>
         <version>1.4.0-SNAPSHOT</version>
+        <relativePath>../build-parent/pom.xml</relativePath>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -105,6 +106,18 @@
        </build>
       </profile>
     </profiles>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.struts</groupId>
+                <artifactId>struts-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
