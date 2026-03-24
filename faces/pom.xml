@@ -24,8 +24,9 @@
 
    <parent>
       <groupId>org.apache.struts</groupId>
-      <artifactId>struts-parent</artifactId>
+      <artifactId>struts-build-parent</artifactId>
       <version>1.4.0-SNAPSHOT</version>
+      <relativePath>../build-parent/pom.xml</relativePath>
    </parent>
 
    <modelVersion>4.0.0</modelVersion>
@@ -50,6 +51,7 @@
 
    <properties>
        <struts.osgi.symbolicName>org.apache.struts.faces</struts.osgi.symbolicName>
+       <struts.version>1.4.0-SNAPSHOT</struts.version>
    </properties>
 
    <build>
@@ -74,21 +76,33 @@
         </testResources>
    </build>
 
+   <dependencyManagement>
+      <dependencies>
+         <dependency>
+            <groupId>org.apache.struts</groupId>
+            <artifactId>struts-bom</artifactId>
+            <version>${struts.version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+         </dependency>
+      </dependencies>
+   </dependencyManagement>
+
    <dependencies>
       <dependency>
-         <groupId>${project.groupId}</groupId>
+         <groupId>org.apache.struts</groupId>
          <artifactId>struts-core</artifactId>
-         <version>${project.version}</version>
+         <version>${struts.version}</version>
       </dependency>
       <dependency>
-         <groupId>${project.groupId}</groupId>
+         <groupId>org.apache.struts</groupId>
          <artifactId>struts-taglib</artifactId>
-         <version>${project.version}</version>
+         <version>${struts.version}</version>
       </dependency>
       <dependency>
-         <groupId>${project.groupId}</groupId>
+         <groupId>org.apache.struts</groupId>
          <artifactId>struts-tiles</artifactId>
-         <version>${project.version}</version>  
+         <version>${struts.version}</version>
       </dependency>
       <dependency>
          <groupId>junit</groupId>

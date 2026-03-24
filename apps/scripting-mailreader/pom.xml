@@ -37,26 +37,42 @@
         <url>http://svn.apache.org/repos/asf/struts/struts1/trunk/apps/scripting-mailreader/</url>
     </scm>
 
+   <properties>
+      <struts.version>1.4.0-SNAPSHOT</struts.version>
+   </properties>
+
+   <dependencyManagement>
+      <dependencies>
+         <dependency>
+            <groupId>org.apache.struts</groupId>
+            <artifactId>struts-bom</artifactId>
+            <version>${struts.version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+         </dependency>
+      </dependencies>
+   </dependencyManagement>
+
    <dependencies>
       <dependency>
-         <groupId>${project.groupId}</groupId>
+         <groupId>org.apache.struts</groupId>
          <artifactId>struts-scripting</artifactId>
-         <version>${project.version}</version>
+         <version>${struts.version}</version>
       </dependency>
       <dependency>
-         <groupId>${project.groupId}</groupId>
+         <groupId>org.apache.struts</groupId>
          <artifactId>struts-taglib</artifactId>
-         <version>${project.version}</version>
+         <version>${struts.version}</version>
       </dependency>
       <dependency>
-         <groupId>${project.groupId}</groupId>
+         <groupId>org.apache.struts</groupId>
          <artifactId>struts-mailreader-dao</artifactId>
-         <version>${project.version}</version>
+         <version>${struts.version}</version>
       </dependency>
       <dependency>
-         <groupId>${project.groupId}</groupId>
+         <groupId>org.apache.struts</groupId>
          <artifactId>struts-extras</artifactId>
-         <version>${project.version}</version>
+         <version>${struts.version}</version>
       </dependency>
       <dependency>
          <groupId>groovy</groupId>
