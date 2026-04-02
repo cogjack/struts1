@@ -15,14 +15,14 @@
     </div>
 
     <div layout:fragment="content">
-        <!-- Validation errors -->
-        <div th:if="${#fields.hasGlobalErrors()}" class="error">
-            <ul>
-                <li th:each="err : ${#fields.globalErrors()}" th:text="${err}">Error</li>
-            </ul>
-        </div>
-
         <form th:action="@{/saveSubscription}" th:object="${subscriptionForm}" method="post">
+            <!-- Validation errors -->
+            <div th:if="${#fields.hasGlobalErrors()}" class="error">
+                <ul>
+                    <li th:each="err : ${#fields.globalErrors()}" th:text="${err}">Error</li>
+                </ul>
+            </div>
+
             <input type="hidden" th:field="*{action}"/>
 
             <table class="form-background">
