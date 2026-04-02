@@ -24,6 +24,8 @@ import org.apache.struts.webapp.example2.Constants;
 import org.apache.struts.webapp.example2.domain.User;
 import org.apache.struts.webapp.example2.domain.UserDatabase;
 import org.apache.struts.webapp.example2.form.LogonForm;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -37,6 +39,8 @@ import org.springframework.web.bind.annotation.PostMapping;
  */
 @Controller
 public class LogonController {
+
+    private static final Logger log = LoggerFactory.getLogger(LogonController.class);
 
     private final UserDatabase userDatabase;
 
@@ -70,11 +74,14 @@ public class LogonController {
 
         User user = userDatabase.findUser(form.getUsername());
 
-        if (user == null || !user.getPassword().equals(form.getPassword())) {
+        if (user == null || !form.getPassword().equals(user.getPassword())) {
             result.reject("error.password.mismatch");
             return "logon";
         }
 
+        if (log.isDebugEnabled()) {
+            log.debug("User '{}' logged on in session {}", form.getUsername(), session.getId());
+        }
         session.setAttribute(Constants.USER_KEY, user);
         return "redirect:/mainMenu";
     }
