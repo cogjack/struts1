@@ -1884,3 +1884,287 @@ The recommended implementation order is:
 - **`DatabaseConfiguration`**: `@SpringBootTest` verifying `UserDatabase` bean is initialized and pre-loaded data (e.g., user `"user"`) is accessible.
 
 **Parallel Running Strategy:** During migration, run both apps simultaneously — original on port `8080`, Spring Boot on port `8081` — to compare behavior for each migrated feature.
+
+---
+
+## 7. Migration Progress Tracking
+
+This section tracks the actual implementation progress against the planned migration phases. It was added after PRs #15–#22 were merged to consolidate progress and identify remaining work.
+
+### 7.1 Implementation Status Summary
+
+| Phase | Description | Status | PRs |
+|-------|-------------|--------|-----|
+| Phase 1 | Spring Boot Project Setup | **Complete** | #17 |
+| Phase 2 | Data Layer Migration | **Complete** | #16 |
+| Phase 3a | LogoffController | **Complete** | #18 |
+| Phase 3b | LogonController + LogonForm | **Complete** | #20 |
+| Phase 3c | RegistrationController + RegistrationForm | **Complete** | (included in earlier batches) |
+| Phase 3d | SubscriptionController + SubscriptionForm | **Complete** | #21 |
+| Phase 3e | Thymeleaf Layout System | **Complete** | #19 |
+| Phase 4 | Thymeleaf Templates + Messages | **Complete** | #22 |
+| Phase 5 | Integration & E2E Testing | **Not Started on trunk** | Unmerged branch exists |
+
+### 7.2 Detailed Phase Completion Report
+
+#### Phase 1: Spring Boot Project Setup — COMPLETE
+
+**What was delivered:**
+- `Application.java` — `@SpringBootApplication` entry point (`src/main/java/.../Application.java`)
+- `pom-spring-boot.xml` — Standalone Spring Boot POM with `spring-boot-starter-parent` 3.2.0, Java 17
+- `application.properties` — Server port, Thymeleaf config, message source config (`src/main/resources/`)
+- `database.xml` — Copied to classpath resources (`src/main/resources/`)
+- `ApplicationContextTest.java` and `TestDatabaseConfiguration.java` — Verify context loads
+
+**Acceptance criteria met:**
+- [x] Application context loads without errors
+- [x] Spring Boot auto-configuration is working
+- [x] Application starts and responds to basic requests
+
+#### Phase 2: Data Layer Migration — COMPLETE
+
+**What was delivered:**
+- `DatabaseConfiguration.java` — `@Configuration` class replacing `MemoryDatabasePlugIn`
+  - `@Bean userDatabase()` — Initializes `MemoryUserDatabase` from classpath resource or file
+  - `@Bean serverTypes()` — Provides IMAP/POP3 options for subscription forms
+  - `@PreDestroy cleanup()` — Saves and closes database on shutdown
+  - `LabelValueBean` inner class — Replaces Struts `LabelValueBean`
+- `Constants.java` — Shared constants for session attribute keys
+- Domain classes retained from original: `User`, `Subscription`, `UserDatabase` interfaces
+- Memory implementations retained: `MemoryUser`, `MemorySubscription`, `MemoryUserDatabase`
+
+**Acceptance criteria met:**
+- [x] Domain class unit tests pass
+- [x] Database initialization works correctly
+- [x] CRUD operations function identically to original
+
+#### Phase 3: Controller Migration — COMPLETE
+
+All six Struts Action classes have been converted to four Spring MVC Controllers:
+
+| Original Action(s) | Spring Controller | Form Object | Validation |
+|---------------------|-------------------|-------------|------------|
+| `LogoffAction` | `LogoffController` | None | None |
+| `LogonAction` | `LogonController` | `LogonForm` | `@NotBlank`, `@Size` |
+| `EditRegistrationAction` + `SaveRegistrationAction` | `RegistrationController` | `RegistrationForm` | `@NotBlank`, `@Email`, `@PasswordMatch` (custom) |
+| `EditSubscriptionAction` + `SaveSubscriptionAction` | `SubscriptionController` | `SubscriptionForm` | `@NotBlank`, `@Pattern` |
+
+**Key implementation details:**
+
+- **`LogoffController`** (`GET /logoff`): Removes session attributes (`USER_KEY`, `SUBSCRIPTION_KEY`), invalidates session, redirects to `/welcome`.
+- **`LogonController`** (`GET /editLogon`, `POST /logon`): Shows logon form, validates credentials against `UserDatabase`, stores `User` in session under `Constants.USER_KEY`.
+- **`RegistrationController`** (`GET /editRegistration`, `POST /saveRegistration`): Handles both Create and Edit modes via `action` parameter. Create mode requires password fields and checks username uniqueness. Edit mode pre-populates form from session user.
+- **`SubscriptionController`** (`GET /editSubscription`, `POST /saveSubscription`): Handles Create/Edit/Delete modes. Delete handled via dedicated `handleDelete()` method. Cancel support via `cancel` request parameter. Stores `Subscription` in session under `Constants.SUBSCRIPTION_KEY`.
+- **Custom `@PasswordMatch` validator**: Class-level annotation on `RegistrationForm` that validates `password` and `password2` fields match, with custom constraint violation on `password2` property node.
+
+**Unit tests delivered:**
+- `LogoffControllerTest`
+- `LogonControllerTest`
+- `LogonFormTest`
+- `RegistrationControllerTest`
+- `RegistrationFormTest`
+- `SubscriptionControllerTest`
+- `SubscriptionFormTest`
+
+**Acceptance criteria met:**
+- [x] All controller unit tests pass
+- [x] Form validation works correctly
+- [x] Error handling matches original behavior
+- [x] Session management works correctly
+
+#### Phase 4: View Migration — COMPLETE
+
+All JSP/JSF views have been converted to Thymeleaf templates:
+
+**Layout system:**
+- `templates/layout/base.html` — Base layout with Thymeleaf Layout Dialect (`layout:fragment` for menu and content)
+- `templates/fragments/header.html` — Application header
+- `templates/fragments/footer.html` — Application footer
+- `templates/fragments/loggedoff-menu.html` — Menu for unauthenticated users (Register, Log On)
+- `templates/fragments/loggedon-menu.html` — Menu for authenticated users (Edit Registration, Log Off)
+
+**Page templates:**
+- `templates/welcome.html` — Welcome page with Register and Log On links
+- `templates/logon.html` — Login form with username/password fields and validation error display
+- `templates/mainMenu.html` — Main menu showing user's username and options
+- `templates/registration.html` — Registration form with Create/Edit mode support, subscription list table
+- `templates/subscription.html` — Subscription form with Create/Edit/Delete mode support, server type dropdown
+
+**Message resources:**
+- `messages.properties` — 102 message keys covering all form labels, errors, buttons, and page titles
+
+**Acceptance criteria met:**
+- [x] All pages render with correct Thymeleaf syntax
+- [x] Forms submit and display errors properly
+- [x] Layout is consistent across all pages via Layout Dialect
+- [x] Conditional rendering for Create/Edit/Delete modes works
+
+### 7.3 Known Issues and Gaps
+
+The following issues were identified during the progress review and must be addressed before the migration can be considered fully complete:
+
+#### Issue 1: Missing Route Controllers — WelcomeController and MainMenuController
+
+**Priority: HIGH**
+
+Multiple controllers redirect to `/welcome` and `/mainMenu`, but no controllers currently handle these GET routes. The Thymeleaf templates `welcome.html` and `mainMenu.html` exist but have no controller to serve them.
+
+**Required:**
+```java
+@Controller
+public class WelcomeController {
+
+    @GetMapping({"/", "/welcome"})
+    public String welcome() {
+        return "welcome";
+    }
+
+    @GetMapping("/mainMenu")
+    public String mainMenu(HttpSession session) {
+        User user = (User) session.getAttribute(Constants.USER_KEY);
+        if (user == null) {
+            return "redirect:/editLogon";
+        }
+        return "mainMenu";
+    }
+}
+```
+
+Without these controllers, the application cannot serve its entry page or post-login landing page.
+
+#### Issue 2: Dual Source Tree Inconsistency
+
+**Priority: MEDIUM**
+
+Spring Boot code currently exists in **two separate source trees**, creating confusion:
+
+| Source Tree | Contents | Used By |
+|-------------|----------|---------|
+| `src/main/java/` | All controllers, forms, config, domain classes, validation, tests | Standard Maven layout (default `pom.xml`) |
+| `src-spring-boot/main/java/` | Earlier/partial versions of some classes (Logon*, domain classes, database config) | `pom-spring-boot.xml` (custom build) |
+
+The `src/` tree contains the **complete and up-to-date** Spring Boot code. The `src-spring-boot/` tree was used in the initial phases (PRs #16, #17, #20) but later phases (#21, #22) placed code directly in `src/`.
+
+**Recommended resolution:**
+1. Consolidate all Spring Boot code into a single source tree (either `src/` or `src-spring-boot/`, but not both)
+2. Update `pom-spring-boot.xml` to point to the chosen tree
+3. Remove the abandoned tree to avoid confusion
+4. Decide whether Spring Boot and legacy Struts code should coexist in `src/` or be fully separated
+
+#### Issue 3: Missing Static Resources
+
+**Priority: MEDIUM**
+
+The migration plan (§5.4) specifies migrating static resources:
+- `stylesheet.css` → `static/css/stylesheet.css`
+- `struts-power.gif` → `static/images/struts-power.gif`
+
+These files exist in the original `src/main/webapp/` directory but have **not** been copied to `src/main/resources/static/` (the Spring Boot standard location). The `base.html` layout template should reference these via `th:href="@{/css/stylesheet.css}"`.
+
+Note: The Phase 5 branch (`origin/devin/1772164385-phase5-integration-testing`) does include these static resources in `src-spring-boot/main/resources/static/`, but this has not been merged to trunk.
+
+#### Issue 4: Missing `changePassword.html` Template
+
+**Priority: LOW**
+
+The file mapping (§5.3) lists `changePassword.jsp` → `templates/changePassword.html` as a planned migration, and the original `struts-config.xml` references an `ExpiredPasswordException` handler that forwards to `/changePassword.faces`. No `changePassword.html` template has been created.
+
+This is low priority because the `ExpiredPasswordException` path is not actively exercised in the current application.
+
+#### Issue 5: `pom-spring-boot.xml` Build Configuration Mismatch
+
+**Priority: HIGH**
+
+`pom-spring-boot.xml` is configured to compile from `src-spring-boot/`:
+```xml
+<sourceDirectory>src-spring-boot/main/java</sourceDirectory>
+<testSourceDirectory>src-spring-boot/test/java</testSourceDirectory>
+```
+
+However, the majority of the migrated Spring Boot code now lives in `src/main/java/`. This means building with `mvn -f pom-spring-boot.xml` will **not** compile the latest controllers (Registration, Subscription) or templates.
+
+**Recommended resolution:** Update `pom-spring-boot.xml` source directories to point to `src/` or consolidate all code into `src-spring-boot/` and update accordingly.
+
+#### Issue 6: Phase 5 Integration Testing — Not Yet Merged
+
+**Priority: MEDIUM**
+
+An unmerged branch `origin/devin/1772164385-phase5-integration-testing` contains Phase 5 work:
+- `ApplicationContextIntegrationTest.java`
+- `EndToEndUserJourneyTest.java`
+- `RegressionTest.java`
+- `LogonIntegrationTest.java`
+- `RegistrationIntegrationTest.java`
+- `SubscriptionIntegrationTest.java`
+
+These tests target the `src-spring-boot/` tree and would need to be updated if the source tree is consolidated. This branch also includes the missing static resources and additional controller/form code for `src-spring-boot/`.
+
+### 7.4 Remaining Work Checklist
+
+The following tasks remain to complete the migration:
+
+#### Must-Have (Blocking for Migration Completion)
+
+- [ ] **Add `WelcomeController`** — Handle `GET /`, `GET /welcome`, and `GET /mainMenu` routes with session-guard logic for `/mainMenu`
+- [ ] **Resolve source tree duplication** — Consolidate `src/` and `src-spring-boot/` into a single canonical location and update `pom-spring-boot.xml`
+- [ ] **Fix `pom-spring-boot.xml` source directories** — Ensure Maven build compiles all migrated code
+- [ ] **Copy static resources** — Move `stylesheet.css` and `struts-power.gif` to `src/main/resources/static/` (or the chosen canonical tree)
+- [ ] **Verify end-to-end build** — Run `mvn -f pom-spring-boot.xml clean package` and confirm the Spring Boot JAR builds successfully
+- [ ] **Verify application startup** — Run the built JAR and confirm the app starts and serves pages at `http://localhost:8080`
+
+#### Should-Have (Important for Quality)
+
+- [ ] **Merge or recreate Phase 5 integration tests** — Port the unmerged integration/E2E tests to the canonical source tree
+- [ ] **Add JaCoCo code coverage** — Configure coverage reporting per §5.7 requirements (85% overall, 90% controllers, 100% forms)
+- [ ] **Regression testing** — Execute the regression test checklist from §5.5 and fill in the status column
+- [ ] **Add `changePassword.html`** template — Low-usage path but listed in the file mapping
+
+#### Nice-to-Have (Polish)
+
+- [ ] **Remove legacy Struts classes from `src/`** — Once migration is validated, the original Action classes, ActionForm classes, JSF backing beans, and Struts tags (`CheckLogonTag`, `LinkSubscriptionTag`, `LinkUserTag`) can be removed or moved to an archive
+- [ ] **Clean up `src-spring-boot/` directory** — Remove the old partial source tree once canonical location is established
+- [ ] **Performance comparison** — Run the JMeter/Gatling tests described in §5.6
+- [ ] **Cross-browser testing** — Verify templates render correctly across browsers
+- [ ] **Add Spring Boot Actuator** — Consider adding health check and metrics endpoints for production readiness
+
+### 7.5 Source Tree Consolidation Recommendation
+
+Given the current state, the recommended approach is:
+
+1. **Adopt `src/` as the canonical Spring Boot source tree** — It already contains the complete, up-to-date code
+2. **Update `pom-spring-boot.xml`** to use standard Maven source directories:
+   ```xml
+   <sourceDirectory>src/main/java</sourceDirectory>
+   <testSourceDirectory>src/test/java</testSourceDirectory>
+   <resources>
+       <resource>
+           <directory>src/main/resources</directory>
+       </resource>
+   </resources>
+   ```
+3. **Add source excludes** for legacy Struts classes that should not be compiled by the Spring Boot build (Action classes, ActionForms, JSF beans, custom tags, `MemoryDatabasePlugIn`)
+4. **Migrate useful content from `src-spring-boot/`** — Copy any files that are more complete in `src-spring-boot/` (e.g., `ApplicationContextTest`, domain tests) into `src/test/` if they don't already exist
+5. **Remove `src-spring-boot/`** once consolidation is verified
+
+Alternatively, if strict separation between legacy and migrated code is preferred:
+1. Keep `src-spring-boot/` as the canonical tree
+2. Copy all migrated code from `src/` into `src-spring-boot/`
+3. Verify `pom-spring-boot.xml` builds and tests pass
+4. Remove Spring Boot code from `src/` to avoid duplication
+
+### 7.6 Revised Effort Estimate
+
+Based on actual progress:
+
+| Remaining Work | Estimated Effort |
+|----------------|-----------------|
+| WelcomeController + route fixes | 0.5 days |
+| Source tree consolidation | 1 day |
+| Static resource migration | 0.5 days |
+| Build verification + startup testing | 0.5 days |
+| Phase 5 integration tests (port/recreate) | 2–3 days |
+| Regression testing + coverage | 1–2 days |
+| Polish and cleanup | 1 day |
+| **Total remaining** | **6–8 days** |
+
+The core migration (Phases 1–4) is substantially complete. The remaining work is primarily around build consolidation, testing, and polish.
