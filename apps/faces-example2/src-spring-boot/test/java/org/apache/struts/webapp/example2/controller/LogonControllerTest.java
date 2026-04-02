@@ -18,15 +18,19 @@
  */
 package org.apache.struts.webapp.example2.controller;
 
+import org.apache.struts.webapp.example2.Constants;
 import org.apache.struts.webapp.example2.domain.MemoryUserDatabase;
 import org.apache.struts.webapp.example2.domain.User;
 import org.apache.struts.webapp.example2.domain.UserDatabase;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -56,18 +60,23 @@ class LogonControllerTest {
         MemoryUserDatabase db = new MemoryUserDatabase();
         User user = db.createUser("testuser");
         user.setPassword("password");
-        org.mockito.Mockito.when(userDatabase.findUser("testuser")).thenReturn(user);
+        Mockito.when(userDatabase.findUser("testuser")).thenReturn(user);
+
+        MockHttpSession session = new MockHttpSession();
 
         mockMvc.perform(post("/logon")
+                        .session(session)
                         .param("username", "testuser")
                         .param("password", "password"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/mainMenu"));
+
+        assertThat(session.getAttribute(Constants.USER_KEY)).isSameAs(user);
     }
 
     @Test
     void processLogon_WithInvalidCredentials_ShouldReturnLogonWithError() throws Exception {
-        org.mockito.Mockito.when(userDatabase.findUser("testuser")).thenReturn(null);
+        Mockito.when(userDatabase.findUser("testuser")).thenReturn(null);
 
         mockMvc.perform(post("/logon")
                         .param("username", "testuser")
@@ -82,11 +91,26 @@ class LogonControllerTest {
         MemoryUserDatabase db = new MemoryUserDatabase();
         User user = db.createUser("testuser");
         user.setPassword("correctpass");
-        org.mockito.Mockito.when(userDatabase.findUser("testuser")).thenReturn(user);
+        Mockito.when(userDatabase.findUser("testuser")).thenReturn(user);
 
         mockMvc.perform(post("/logon")
                         .param("username", "testuser")
                         .param("password", "wrongpass"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("logon"))
+                .andExpect(model().hasErrors());
+    }
+
+    @Test
+    void processLogon_WithNullPasswordUser_ShouldReturnLogonWithError() throws Exception {
+        MemoryUserDatabase db = new MemoryUserDatabase();
+        User user = db.createUser("testuser");
+        // password intentionally left as null (MemoryUser default)
+        Mockito.when(userDatabase.findUser("testuser")).thenReturn(user);
+
+        mockMvc.perform(post("/logon")
+                        .param("username", "testuser")
+                        .param("password", "anypass"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("logon"))
                 .andExpect(model().hasErrors());
