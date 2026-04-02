@@ -25,6 +25,7 @@ import org.apache.struts.webapp.example2.Subscription;
 import org.apache.struts.webapp.example2.User;
 import org.apache.struts.webapp.example2.UserDatabase;
 import org.apache.struts.webapp.example2.config.DatabaseConfiguration.LabelValueBean;
+import org.apache.struts.webapp.example2.form.SubscriptionForm;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -33,7 +34,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -401,5 +404,350 @@ class SubscriptionControllerTest {
                 .session(session))
             .andExpect(status().isOk())
             .andExpect(model().attributeExists("serverTypes"));
+    }
+
+    // --- Default action behavior ---
+
+    @Test
+    void editSubscription_WithNoActionParam_ShouldDefaultToCreate() throws Exception {
+        User user = mock(User.class);
+        when(user.getUsername()).thenReturn("testuser");
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+
+        MvcResult result = mockMvc.perform(get("/editSubscription")
+                .session(session))
+            .andExpect(status().isOk())
+            .andExpect(view().name("subscription"))
+            .andExpect(model().attributeExists("subscriptionForm"))
+            .andReturn();
+
+        SubscriptionForm form = (SubscriptionForm) result.getModelAndView()
+                .getModel().get("subscriptionForm");
+        assertThat(form.getAction()).isEqualTo("Create");
+    }
+
+    // --- Form field population verification ---
+
+    @Test
+    void editSubscription_EditAction_ShouldPopulateAllFormFields() throws Exception {
+        User user = mock(User.class);
+        Subscription subscription = mock(Subscription.class);
+        when(user.getUsername()).thenReturn("testuser");
+        when(user.findSubscription("mail.example.com")).thenReturn(subscription);
+        when(subscription.getHost()).thenReturn("mail.example.com");
+        when(subscription.getUsername()).thenReturn("mailuser");
+        when(subscription.getPassword()).thenReturn("mailpass");
+        when(subscription.getType()).thenReturn("imap");
+        when(subscription.getAutoConnect()).thenReturn(true);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+
+        MvcResult result = mockMvc.perform(get("/editSubscription")
+                .param("action", "Edit")
+                .param("host", "mail.example.com")
+                .session(session))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        SubscriptionForm form = (SubscriptionForm) result.getModelAndView()
+                .getModel().get("subscriptionForm");
+        assertThat(form.getAction()).isEqualTo("Edit");
+        assertThat(form.getHost()).isEqualTo("mail.example.com");
+        assertThat(form.getUsername()).isEqualTo("mailuser");
+        assertThat(form.getPassword()).isEqualTo("mailpass");
+        assertThat(form.getType()).isEqualTo("imap");
+        assertThat(form.isAutoConnect()).isTrue();
+    }
+
+    @Test
+    void editSubscription_DeleteAction_ShouldPopulateFormFieldsFromSubscription() throws Exception {
+        User user = mock(User.class);
+        Subscription subscription = mock(Subscription.class);
+        when(user.getUsername()).thenReturn("testuser");
+        when(user.findSubscription("mail.example.com")).thenReturn(subscription);
+        when(subscription.getHost()).thenReturn("mail.example.com");
+        when(subscription.getUsername()).thenReturn("mailuser");
+        when(subscription.getPassword()).thenReturn("mailpass");
+        when(subscription.getType()).thenReturn("pop3");
+        when(subscription.getAutoConnect()).thenReturn(false);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+
+        MvcResult result = mockMvc.perform(get("/editSubscription")
+                .param("action", "Delete")
+                .param("host", "mail.example.com")
+                .session(session))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        SubscriptionForm form = (SubscriptionForm) result.getModelAndView()
+                .getModel().get("subscriptionForm");
+        assertThat(form.getAction()).isEqualTo("Delete");
+        assertThat(form.getHost()).isEqualTo("mail.example.com");
+        assertThat(form.getUsername()).isEqualTo("mailuser");
+        assertThat(form.getPassword()).isEqualTo("mailpass");
+        assertThat(form.getType()).isEqualTo("pop3");
+        assertThat(form.isAutoConnect()).isFalse();
+    }
+
+    // --- Delete action with non-existing subscription on edit page ---
+
+    @Test
+    void editSubscription_DeleteAction_WithNonExistingSubscription_ShouldRedirect() throws Exception {
+        User user = mock(User.class);
+        when(user.getUsername()).thenReturn("testuser");
+        when(user.findSubscription("nonexistent.com")).thenReturn(null);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+
+        mockMvc.perform(get("/editSubscription")
+                .param("action", "Delete")
+                .param("host", "nonexistent.com")
+                .session(session))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(redirectedUrl("/editRegistration"));
+    }
+
+    // --- Session attribute management ---
+
+    @Test
+    void editSubscription_EditAction_ShouldStoreSubscriptionInSession() throws Exception {
+        User user = mock(User.class);
+        Subscription subscription = mock(Subscription.class);
+        when(user.getUsername()).thenReturn("testuser");
+        when(user.findSubscription("mail.example.com")).thenReturn(subscription);
+        when(subscription.getHost()).thenReturn("mail.example.com");
+        when(subscription.getUsername()).thenReturn("mailuser");
+        when(subscription.getPassword()).thenReturn("mailpass");
+        when(subscription.getType()).thenReturn("imap");
+        when(subscription.getAutoConnect()).thenReturn(false);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+
+        mockMvc.perform(get("/editSubscription")
+                .param("action", "Edit")
+                .param("host", "mail.example.com")
+                .session(session))
+            .andExpect(status().isOk());
+
+        assertThat(session.getAttribute(Constants.SUBSCRIPTION_KEY)).isSameAs(subscription);
+    }
+
+    @Test
+    void saveSubscription_CreateAction_ShouldRemoveSubscriptionKeyFromSession() throws Exception {
+        User user = mock(User.class);
+        Subscription subscription = mock(Subscription.class);
+        when(user.createSubscription("mail.example.com")).thenReturn(subscription);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+        session.setAttribute(Constants.SUBSCRIPTION_KEY, mock(Subscription.class));
+
+        mockMvc.perform(post("/saveSubscription")
+                .param("action", "Create")
+                .param("host", "mail.example.com")
+                .param("username", "mailuser")
+                .param("password", "mailpass")
+                .param("type", "imap")
+                .session(session))
+            .andExpect(status().is3xxRedirection());
+
+        assertThat(session.getAttribute(Constants.SUBSCRIPTION_KEY)).isNull();
+    }
+
+    @Test
+    void saveSubscription_EditAction_ShouldRemoveSubscriptionKeyFromSession() throws Exception {
+        User user = mock(User.class);
+        Subscription subscription = mock(Subscription.class);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+        session.setAttribute(Constants.SUBSCRIPTION_KEY, subscription);
+
+        mockMvc.perform(post("/saveSubscription")
+                .param("action", "Edit")
+                .param("host", "mail.example.com")
+                .param("username", "newuser")
+                .param("password", "newpass")
+                .param("type", "pop3")
+                .session(session))
+            .andExpect(status().is3xxRedirection());
+
+        assertThat(session.getAttribute(Constants.SUBSCRIPTION_KEY)).isNull();
+    }
+
+    @Test
+    void saveSubscription_DeleteAction_ShouldRemoveSubscriptionKeyFromSession() throws Exception {
+        User user = mock(User.class);
+        Subscription subscription = mock(Subscription.class);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+        session.setAttribute(Constants.SUBSCRIPTION_KEY, subscription);
+
+        mockMvc.perform(post("/saveSubscription")
+                .param("action", "Delete")
+                .param("host", "mail.example.com")
+                .param("username", "mailuser")
+                .param("type", "imap")
+                .session(session))
+            .andExpect(status().is3xxRedirection());
+
+        assertThat(session.getAttribute(Constants.SUBSCRIPTION_KEY)).isNull();
+    }
+
+    @Test
+    void saveSubscription_WithCancel_ShouldRemoveSubscriptionKeyFromSession() throws Exception {
+        User user = mock(User.class);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+        session.setAttribute(Constants.SUBSCRIPTION_KEY, mock(Subscription.class));
+
+        mockMvc.perform(post("/saveSubscription")
+                .param("action", "Edit")
+                .param("host", "mail.example.com")
+                .param("username", "mailuser")
+                .param("type", "imap")
+                .param("cancel", "cancel")
+                .session(session))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(redirectedUrl("/editRegistration"));
+
+        assertThat(session.getAttribute(Constants.SUBSCRIPTION_KEY)).isNull();
+    }
+
+    // --- AutoConnect handling ---
+
+    @Test
+    void saveSubscription_CreateAction_ShouldSetAutoConnect() throws Exception {
+        User user = mock(User.class);
+        Subscription subscription = mock(Subscription.class);
+        when(user.createSubscription("mail.example.com")).thenReturn(subscription);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+
+        mockMvc.perform(post("/saveSubscription")
+                .param("action", "Create")
+                .param("host", "mail.example.com")
+                .param("username", "mailuser")
+                .param("password", "mailpass")
+                .param("type", "imap")
+                .param("autoConnect", "true")
+                .session(session))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(redirectedUrl("/editRegistration"));
+
+        verify(subscription).setAutoConnect(true);
+    }
+
+    @Test
+    void saveSubscription_CreateAction_WithoutAutoConnect_ShouldDefaultToFalse() throws Exception {
+        User user = mock(User.class);
+        Subscription subscription = mock(Subscription.class);
+        when(user.createSubscription("mail.example.com")).thenReturn(subscription);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+
+        mockMvc.perform(post("/saveSubscription")
+                .param("action", "Create")
+                .param("host", "mail.example.com")
+                .param("username", "mailuser")
+                .param("password", "mailpass")
+                .param("type", "imap")
+                .session(session))
+            .andExpect(status().is3xxRedirection());
+
+        verify(subscription).setAutoConnect(false);
+    }
+
+    @Test
+    void saveSubscription_EditAction_ShouldUpdateAutoConnect() throws Exception {
+        User user = mock(User.class);
+        Subscription subscription = mock(Subscription.class);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+        session.setAttribute(Constants.SUBSCRIPTION_KEY, subscription);
+
+        mockMvc.perform(post("/saveSubscription")
+                .param("action", "Edit")
+                .param("host", "mail.example.com")
+                .param("username", "newuser")
+                .param("password", "newpass")
+                .param("type", "pop3")
+                .param("autoConnect", "true")
+                .session(session))
+            .andExpect(status().is3xxRedirection());
+
+        verify(subscription).setAutoConnect(true);
+    }
+
+    // --- Multiple validation errors ---
+
+    @Test
+    void saveSubscription_CreateAction_WithMultipleBlankFields_ShouldShowAllErrors() throws Exception {
+        User user = mock(User.class);
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+
+        mockMvc.perform(post("/saveSubscription")
+                .param("action", "Create")
+                .param("host", "")
+                .param("username", "")
+                .param("password", "")
+                .param("type", "")
+                .session(session))
+            .andExpect(status().isOk())
+            .andExpect(view().name("subscription"))
+            .andExpect(model().attributeHasFieldErrors("subscriptionForm",
+                    "host", "username", "password", "type"));
+    }
+
+    // --- Validation error should include user in model ---
+
+    @Test
+    void saveSubscription_WithValidationErrors_ShouldIncludeUserInModel() throws Exception {
+        User user = mock(User.class);
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+
+        mockMvc.perform(post("/saveSubscription")
+                .param("action", "Create")
+                .param("host", "")
+                .param("username", "mailuser")
+                .param("password", "mailpass")
+                .param("type", "imap")
+                .session(session))
+            .andExpect(status().isOk())
+            .andExpect(view().name("subscription"))
+            .andExpect(model().attributeExists("user"));
+    }
+
+    @Test
+    void saveSubscription_DuplicateHost_ShouldIncludeUserInModel() throws Exception {
+        User user = mock(User.class);
+        when(user.createSubscription("mail.example.com")).thenThrow(new IllegalArgumentException("Duplicate host"));
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+
+        mockMvc.perform(post("/saveSubscription")
+                .param("action", "Create")
+                .param("host", "mail.example.com")
+                .param("username", "mailuser")
+                .param("password", "mailpass")
+                .param("type", "imap")
+                .session(session))
+            .andExpect(status().isOk())
+            .andExpect(view().name("subscription"))
+            .andExpect(model().attributeExists("user"));
     }
 }
