@@ -19,55 +19,107 @@
 
 package org.apache.struts.webapp.example2.controller;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import org.apache.struts.webapp.example2.Constants;
 import org.apache.struts.webapp.example2.User;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.web.servlet.MockMvc;
 
-public class LogoffControllerTest {
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-    private LogoffController controller;
+@WebMvcTest(LogoffController.class)
+class LogoffControllerTest {
 
-    @BeforeEach
-    public void setUp() {
-        controller = new LogoffController();
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Test
+    void logoff_ShouldRedirectToWelcome() throws Exception {
+        mockMvc.perform(get("/logoff"))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(redirectedUrl("/welcome"));
     }
 
     @Test
-    public void logoff_ShouldReturnRedirectToWelcome() {
-        MockHttpSession session = new MockHttpSession();
-
-        String result = controller.logoff(session);
-
-        assertEquals("redirect:/welcome", result);
-    }
-
-    @Test
-    public void logoff_WithUserInSession_ShouldInvalidateSession() {
-        MockHttpSession session = new MockHttpSession();
+    void logoff_WithUserInSession_ShouldInvalidateSession() throws Exception {
         User user = mock(User.class);
         when(user.getUsername()).thenReturn("testuser");
+
+        MockHttpSession session = new MockHttpSession();
         session.setAttribute(Constants.USER_KEY, user);
         session.setAttribute(Constants.SUBSCRIPTION_KEY, "subscription");
 
-        controller.logoff(session);
+        mockMvc.perform(get("/logoff").session(session))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(redirectedUrl("/welcome"));
 
-        assertTrue(session.isInvalid(), "Session should be invalidated");
+        assertThat(session.isInvalid()).isTrue();
     }
 
     @Test
-    public void logoff_WithoutUserInSession_ShouldStillInvalidateSession() {
+    void logoff_WithoutUserInSession_ShouldStillInvalidateSession() throws Exception {
         MockHttpSession session = new MockHttpSession();
 
-        controller.logoff(session);
+        mockMvc.perform(get("/logoff").session(session))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(redirectedUrl("/welcome"));
 
-        assertTrue(session.isInvalid(), "Session should be invalidated");
+        assertThat(session.isInvalid()).isTrue();
+    }
+
+    @Test
+    void logoff_ShouldRemoveUserAttribute() throws Exception {
+        User user = mock(User.class);
+        when(user.getUsername()).thenReturn("testuser");
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+
+        mockMvc.perform(get("/logoff").session(session))
+            .andExpect(status().is3xxRedirection());
+
+        assertThat(session.isInvalid()).isTrue();
+    }
+
+    @Test
+    void logoff_ShouldRemoveSubscriptionAttribute() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.SUBSCRIPTION_KEY, "subscription-data");
+
+        mockMvc.perform(get("/logoff").session(session))
+            .andExpect(status().is3xxRedirection());
+
+        assertThat(session.isInvalid()).isTrue();
+    }
+
+    @Test
+    void logoff_WithBothAttributes_ShouldRemoveBothAndInvalidate() throws Exception {
+        User user = mock(User.class);
+        when(user.getUsername()).thenReturn("testuser");
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(Constants.USER_KEY, user);
+        session.setAttribute(Constants.SUBSCRIPTION_KEY, "subscription-data");
+
+        mockMvc.perform(get("/logoff").session(session))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(redirectedUrl("/welcome"));
+
+        assertThat(session.isInvalid()).isTrue();
+    }
+
+    @Test
+    void logoff_ViaPost_ShouldNotBeAllowed() throws Exception {
+        mockMvc.perform(post("/logoff"))
+            .andExpect(status().isMethodNotAllowed());
     }
 
 }
