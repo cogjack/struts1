@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>
+        <span th:if="${registrationForm.action == 'Create'}" th:text="#{registration.title.create}">Register</span>
+        <span th:if="${registrationForm.action == 'Edit'}" th:text="#{registration.title.edit}">Edit Registration</span>
+    </title>
+</head>
+<body>
+    <div layout:fragment="menu">
+        <div th:if="${registrationForm.action == 'Create'}" th:replace="~{fragments/loggedoff-menu :: menu}"></div>
+        <div th:if="${registrationForm.action != 'Create'}" th:replace="~{fragments/loggedon-menu :: menu}"></div>
+    </div>
+
+    <div layout:fragment="content">
+        <form th:action="@{/saveRegistration}" th:object="${registrationForm}" method="post">
+            <!-- Validation errors -->
+            <div th:if="${#fields.hasGlobalErrors()}" class="error">
+                <ul>
+                    <li th:each="err : ${#fields.globalErrors()}" th:text="${err}">Error</li>
+                </ul>
+            </div>
+
+            <input type="hidden" th:field="*{action}"/>
+
+            <table class="form-background">
+                <tr>
+                    <th colspan="2" class="form-header">
+                        <span th:if="${registrationForm.action == 'Create'}" th:text="#{registration.header.create}">Enter Registration Information</span>
+                        <span th:if="${registrationForm.action == 'Edit'}" th:text="#{registration.header.edit}">Edit Your Registration Information</span>
+                    </th>
+                </tr>
+                <tr>
+                    <td class="form-prompt">
+                        <label for="username" th:text="#{prompt.username}">Username</label>
+                    </td>
+                    <td class="form-field">
+                        <input th:if="${registrationForm.action == 'Create'}" type="text" id="username" th:field="*{username}" size="16" autofocus="autofocus"/>
+                        <span th:if="${registrationForm.action != 'Create'}" th:text="*{username}">username</span>
+                        <input th:if="${registrationForm.action != 'Create'}" type="hidden" th:field="*{username}"/>
+                        <span th:if="${#fields.hasErrors('username')}" th:errors="*{username}" class="error"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-prompt">
+                        <label for="password" th:text="#{prompt.password}">Password</label>
+                    </td>
+                    <td class="form-field">
+                        <input type="text" id="password" th:field="*{password}" size="16"/>
+                        <span th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="error"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-prompt">
+                        <label for="password2" th:text="#{prompt.password2}">(Repeat) Password</label>
+                    </td>
+                    <td class="form-field">
+                        <input type="text" id="password2" th:field="*{password2}" size="16"/>
+                        <span th:if="${#fields.hasErrors('password2')}" th:errors="*{password2}" class="error"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-prompt">
+                        <label for="fullName" th:text="#{prompt.fullName}">Full Name</label>
+                    </td>
+                    <td class="form-field">
+                        <input type="text" id="fullName" th:field="*{fullName}" size="50"/>
+                        <span th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}" class="error"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-prompt">
+                        <label for="fromAddress" th:text="#{prompt.fromAddress}">From Address</label>
+                    </td>
+                    <td class="form-field">
+                        <input type="text" id="fromAddress" th:field="*{fromAddress}" size="50"/>
+                        <span th:if="${#fields.hasErrors('fromAddress')}" th:errors="*{fromAddress}" class="error"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-prompt">
+                        <label for="replyToAddress" th:text="#{prompt.replyToAddress}">Reply To Address</label>
+                    </td>
+                    <td class="form-field">
+                        <input type="text" id="replyToAddress" th:field="*{replyToAddress}" size="50"/>
+                        <span th:if="${#fields.hasErrors('replyToAddress')}" th:errors="*{replyToAddress}" class="error"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-field">
+                        <button type="submit" class="command-single" th:text="#{button.save}">Save</button>
+                    </td>
+                    <td class="form-field">
+                        <button type="reset" class="command-multiple" th:text="#{button.reset}">Reset</button>
+                        <button type="submit" name="cancel" value="true" class="command-multiple" th:text="#{button.cancel}">Cancel</button>
+                    </td>
+                </tr>
+            </table>
+        </form>
+
+        <!-- Subscriptions table (only in Edit mode) -->
+        <div th:if="${registrationForm.action == 'Edit' and user != null}">
+            <h3 th:text="#{heading.subscriptions}">Current Subscriptions</h3>
+            <table class="list-background">
+                <tr class="list-header">
+                    <th class="list-column-host" th:text="#{heading.host}">Host Name</th>
+                    <th class="list-column-user" th:text="#{heading.user}">User Name</th>
+                    <th class="list-column-type" th:text="#{heading.type}">Server Type</th>
+                    <th class="list-column-auto" th:text="#{heading.autoConnect}">Auto</th>
+                    <th class="list-column-action" th:text="#{heading.action}">Action</th>
+                </tr>
+                <tr th:each="subscription, iterStat : ${user.subscriptions}"
+                    th:class="${iterStat.odd} ? 'list-row-odd' : 'list-row-even'">
+                    <td class="list-column-host" th:text="${subscription.host}">host</td>
+                    <td class="list-column-user" th:text="${subscription.username}">username</td>
+                    <td class="list-column-type" th:text="${subscription.type}">type</td>
+                    <td class="list-column-auto" th:text="${subscription.autoConnect}">auto</td>
+                    <td class="list-column-action">
+                        <a th:href="@{/editSubscription(action='Delete',host=${subscription.host})}"
+                           class="command-multiple" th:text="#{registration.deleteSubscription}">Delete</a>
+                        <a th:href="@{/editSubscription(action='Edit',host=${subscription.host})}"
+                           class="command-multiple" th:text="#{registration.editSubscription}">Edit</a>
+                    </td>
+                </tr>
+            </table>
+            <a th:href="@{/editSubscription(action='Create')}" th:text="#{registration.addSubscription}">Add</a>
+        </div>
+    </div>
+</body>
+</html>

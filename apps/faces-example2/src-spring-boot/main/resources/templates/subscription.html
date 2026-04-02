@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head>
+    <title>
+        <span th:if="${subscriptionForm.action == 'Create'}" th:text="#{subscription.title.create}">Create New Mail Subscription</span>
+        <span th:if="${subscriptionForm.action == 'Delete'}" th:text="#{subscription.title.delete}">Delete Existing Mail Subscription</span>
+        <span th:if="${subscriptionForm.action == 'Edit'}" th:text="#{subscription.title.edit}">Edit Existing Mail Subscription</span>
+    </title>
+</head>
+<body>
+    <div layout:fragment="menu">
+        <div th:replace="~{fragments/loggedon-menu :: menu}"></div>
+    </div>
+
+    <div layout:fragment="content">
+        <form th:action="@{/saveSubscription}" th:object="${subscriptionForm}" method="post">
+            <!-- Validation errors -->
+            <div th:if="${#fields.hasGlobalErrors()}" class="error">
+                <ul>
+                    <li th:each="err : ${#fields.globalErrors()}" th:text="${err}">Error</li>
+                </ul>
+            </div>
+
+            <input type="hidden" th:field="*{action}"/>
+
+            <table class="form-background">
+                <tr>
+                    <th colspan="2" class="form-header">
+                        <span th:if="${subscriptionForm.action == 'Create'}" th:text="#{subscription.title.create}">Create New Mail Subscription</span>
+                        <span th:if="${subscriptionForm.action == 'Delete'}" th:text="#{subscription.title.delete}">Delete Existing Mail Subscription</span>
+                        <span th:if="${subscriptionForm.action == 'Edit'}" th:text="#{subscription.title.edit}">Edit Existing Mail Subscription</span>
+                    </th>
+                </tr>
+                <tr>
+                    <td class="form-prompt">
+                        <label th:text="#{prompt.username}">Username</label>
+                    </td>
+                    <td class="form-field">
+                        <span th:text="${user.username}">username</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-prompt">
+                        <label for="host" th:text="#{prompt.mailHostname}">Mail Server</label>
+                    </td>
+                    <td class="form-field">
+                        <input th:if="${subscriptionForm.action == 'Create'}" type="text" id="host" th:field="*{host}" size="50" autofocus="autofocus"/>
+                        <span th:if="${subscriptionForm.action != 'Create'}" th:text="*{host}">host</span>
+                        <input th:if="${subscriptionForm.action != 'Create'}" type="hidden" th:field="*{host}"/>
+                        <span th:if="${#fields.hasErrors('host')}" th:errors="*{host}" class="error"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-prompt">
+                        <label for="username" th:text="#{prompt.mailUsername}">Mail Username</label>
+                    </td>
+                    <td class="form-field">
+                        <input type="text" id="username" th:field="*{username}" size="50"/>
+                        <span th:if="${#fields.hasErrors('username')}" th:errors="*{username}" class="error"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-prompt">
+                        <label for="password" th:text="#{prompt.mailPassword}">Mail Password</label>
+                    </td>
+                    <td class="form-field">
+                        <input type="text" id="password" th:field="*{password}" size="50"/>
+                        <span th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="error"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-prompt">
+                        <label for="type" th:text="#{prompt.mailServerType}">Server Type</label>
+                    </td>
+                    <td class="form-field">
+                        <select id="type" th:field="*{type}">
+                            <option th:each="serverType : ${serverTypes}"
+                                    th:value="${serverType.value}"
+                                    th:text="${serverType.label}">Type</option>
+                        </select>
+                        <span th:if="${#fields.hasErrors('type')}" th:errors="*{type}" class="error"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-prompt">
+                        <label for="autoConnect" th:text="#{prompt.autoConnect}">Auto Connect</label>
+                    </td>
+                    <td class="form-field">
+                        <input type="checkbox" id="autoConnect" th:field="*{autoConnect}"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-field">
+                        <button th:if="${subscriptionForm.action == 'Delete'}" type="submit" class="command-single" th:text="#{button.confirm}">Confirm</button>
+                        <button th:if="${subscriptionForm.action != 'Delete'}" type="submit" class="command-single" th:text="#{button.save}">Save</button>
+                    </td>
+                    <td class="form-field">
+                        <button type="reset" class="command-multiple" th:text="#{button.reset}">Reset</button>
+                        <button type="submit" name="cancel" value="true" class="command-multiple" th:text="#{button.cancel}">Cancel</button>
+                    </td>
+                </tr>
+            </table>
+        </form>
+    </div>
+</body>
+</html>

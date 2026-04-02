@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+    <meta charset="UTF-8"/>
+    <title layout:title-pattern="$CONTENT_TITLE">Struts+Tiles+Faces Example Application</title>
+    <link th:href="@{/css/stylesheet.css}" rel="stylesheet"/>
+</head>
+<body>
+    <table border="1" width="100%" cellspacing="5">
+        <tr>
+            <th colspan="2" align="center">
+                <div th:replace="~{fragments/header :: header}"></div>
+            </th>
+        </tr>
+        <tr>
+            <td width="140" valign="top">
+                <div layout:fragment="menu"></div>
+            </td>
+            <td align="left" valign="top">
+                <div layout:fragment="content"></div>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2" align="center">
+                <div th:replace="~{fragments/footer :: footer}"></div>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
