@@ -28,12 +28,12 @@ import jakarta.validation.constraints.Size;
  */
 public class LogonForm {
 
-    @NotBlank
-    @Size(min = 3, max = 16)
+    @NotBlank(message = "{error.username.required}")
+    @Size(min = 3, max = 16, message = "{errors.range}")
     private String username;
 
-    @NotBlank
-    @Size(min = 3, max = 16)
+    @NotBlank(message = "{error.password.required}")
+    @Size(min = 3, max = 16, message = "{errors.range}")
     private String password;
 
     public String getUsername() {
