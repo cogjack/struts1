@@ -101,6 +101,7 @@ public class RegistrationController {
     public String saveRegistration(
             @Valid @ModelAttribute("registrationForm") RegistrationForm registrationForm,
             BindingResult result,
+            @RequestParam(value = "cancel", required = false) String cancel,
             HttpSession session,
             Model model) {
 
@@ -119,6 +120,13 @@ public class RegistrationController {
                 log.trace("User is not logged on in session {}", session.getId());
             }
             return "redirect:/editLogon";
+        }
+
+        if (cancel != null) {
+            if (log.isTraceEnabled()) {
+                log.trace("Transaction '{}' was cancelled", action);
+            }
+            return "Create".equals(action) ? "redirect:/welcome" : "redirect:/mainMenu";
         }
 
         if ("Create".equals(action)) {

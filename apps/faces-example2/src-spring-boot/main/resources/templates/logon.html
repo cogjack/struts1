@@ -11,14 +11,14 @@
     </div>
 
     <div layout:fragment="content">
-        <!-- Global errors (e.g. credential mismatch) -->
-        <div th:if="${#fields.hasGlobalErrors()}" class="error">
-            <ul>
-                <li th:each="err : ${#fields.globalErrors()}" th:text="${err}">Error</li>
-            </ul>
-        </div>
-
         <form th:action="@{/logon}" th:object="${logonForm}" method="post">
+            <!-- Global errors (e.g. credential mismatch) -->
+            <div th:if="${#fields.hasGlobalErrors()}" class="error">
+                <ul>
+                    <li th:each="err : ${#fields.globalErrors()}" th:text="${err}">Error</li>
+                </ul>
+            </div>
+
             <table class="form-background">
                 <tr>
                     <th colspan="2" class="form-header" th:text="#{logon.header}">Logon Form</th>
